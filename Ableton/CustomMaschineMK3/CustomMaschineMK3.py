@@ -861,8 +861,17 @@ class CustomMaschineMK3(ControlSurface):
         parameter.value = min(max(value, parameter.min), parameter.max)
 
     def _knob_track(self, index, what):
-        # The track of a knob is the owner of the parameter it controls (volume, pan or send of a track). In the
-        # device page of the session view the knobs control a device, not a track: nothing to do there
+        # In the session view knob N is the track of column N of the grid on the screens, whatever the knobs control
+        # (volume or, in the FX page, the selected device): MUTE / SOLO / FOLLOW + knob work the same in both pages
+        if self._session_view:
+            ring, tracks, _ = self._session_tracks_and_scenes()
+            position = self._session_block(ring) + index
+            if 0 <= position < len(tracks) and liveobj_valid(tracks[position]):
+                return tracks[position]
+            self._log(f"{what} + knob {index + 1}: no track in that column of the grid")
+            self._c_instance.show_message("No track in that column")
+            return None
+        # Elsewhere the track of a knob is the owner of the parameter it controls (volume, pan or send of a track)
         parameter = self._get_knob_mapped_parameter(index)
         owner = parameter_owner(parameter) if liveobj_valid(parameter) else None
         if not isinstance(owner, Live.Track.Track):

@@ -11,7 +11,7 @@ todavía más clara (76 contra 58), así se sabe cuál mostrar.
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from maschine_display import HEIGHT, WIDTH
+from maschine_mk3_driver.display import HEIGHT, WIDTH
 
 HEADER_HEIGHT = 24
 SELECTED_MIN_BRIGHTNESS = 48  # mediana del gris de una línea de la fila seleccionada (las otras: 19 y 34)

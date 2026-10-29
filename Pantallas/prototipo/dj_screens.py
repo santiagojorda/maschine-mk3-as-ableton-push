@@ -35,9 +35,9 @@ from ableton_text import DEFAULT_PORT as ABLETON_TEXT_PORT
 from ableton_text import AbletonText, render_screen
 from ableton_ui import render_screen as render_ui_screen
 from ableton_ui import PopupTracker, screen_kind, touched_knobs, wants_graphics
-from maschine_display import HEIGHT, WIDTH, MaschineDisplays
+from maschine_mk3_driver.display import HEIGHT, WIDTH, MaschineDisplays
 from mode import ABLETON, DJ, ModeWatcher
-from screen_capture import RegionCapture, set_dpi_aware
+from maschine_mk3_driver.screen_capture import RegionCapture, set_dpi_aware
 import registro
 from leds import blank_leds
 from paths import DATA_DIR, child_command, config_path
@@ -47,7 +47,7 @@ from encoder_view import render_ableton as render_ableton_encoder
 from vdj_browser import BrowserView
 from vdj_data import BRIDGE_ADDRESS, VdjData
 from vdj_master import MasterBpmSender
-from window_capture import BackgroundWindowCapture
+from maschine_mk3_driver.window_capture import BackgroundWindowCapture
 
 STATS_EVERY_S = 5.0
 SCREEN_NAMES = ("left", "right")

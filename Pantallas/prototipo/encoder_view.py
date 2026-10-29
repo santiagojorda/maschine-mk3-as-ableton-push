@@ -9,7 +9,7 @@ posición y, para el master, el medidor de salida.
 from PIL import Image, ImageDraw
 
 from ableton_ui import BACKGROUND, DIM_TEXT, GROOVE, TEXT, _centered, _font, _meter_color, _text_color_on
-from maschine_display import HEIGHT, WIDTH
+from maschine_mk3_driver.display import HEIGHT, WIDTH
 
 VOLUME = "volume"
 SWING = "swing"

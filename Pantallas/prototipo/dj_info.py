@@ -13,7 +13,7 @@ from PIL import Image, ImageDraw
 
 from ableton_ui import (ACCENT, BACKGROUND, COLUMN_WIDTH, DIM_TEXT, GROOVE, TEXT, _centered, _fit_text, _font,
                         _text_color_on)
-from maschine_display import HEIGHT, WIDTH
+from maschine_mk3_driver.display import HEIGHT, WIDTH
 
 DECK_COLORS = ((0, 160, 235), (235, 50, 70))  # como VirtualDJ: deck 1 azul, deck 2 rojo
 PANEL_WIDTH = WIDTH // 2

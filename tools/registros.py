@@ -19,7 +19,7 @@ from pathlib import Path
 
 LOCALAPPDATA = Path(os.environ.get("LOCALAPPDATA", ""))
 APPDATA = Path(os.environ.get("APPDATA", ""))
-SCRIPT = Path(r"C:\ProgramData\Ableton\Live 12 Suite\Resources\MIDI Remote Scripts\CustomMaschineMK3")
+SCRIPT = Path(r"C:\ProgramData\Ableton\Live 12 Suite\Resources\MIDI Remote Scripts\Maschine_as_Push")
 DATE = re.compile(r"^(\d{4}-\d\d-\d\d)[T ](\d\d:\d\d:\d\d)(\.\d+)?")
 
 

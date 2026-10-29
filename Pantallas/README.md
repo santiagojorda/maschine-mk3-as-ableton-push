@@ -14,7 +14,7 @@ Servidor y driver USB de alto rendimiento para **Native Instruments Maschine MK3
 Forma parte del ecosistema **[maschine-mk3-as-ableton-push](https://github.com/santiagojorda/maschine-mk3-as-ableton-push)** y permite visualizar grilla de clips (Session), faders y vúmetros (Mixer), controles de dispositivos/plugins y el navegador de samples directamente en el hardware, transformando la Maschine en un controlador estilo **Ableton Push**.
 
 🌐 **Sitio Web & Manual:** [santiagojorda.github.io/maschine-mk3-as-ableton-push](https://santiagojorda.github.io/maschine-mk3-as-ableton-push/)  
-📦 **Descarga Directa (EXE):** [Última Release en GitHub](https://github.com/santiagojorda/maschine-mk3-driver/releases/latest)  
+📦 **Descarga Directa (EXE):** [Última Release en GitHub](https://github.com/santiagojorda/maschine-mk3-as-ableton-push/releases/latest)  
 🔗 **Repositorio Principal:** [maschine-mk3-as-ableton-push](https://github.com/santiagojorda/maschine-mk3-as-ableton-push)
 
 ---
@@ -57,7 +57,7 @@ Se incluyen scripts directos de un solo clic en la raíz:
 
 ### Ejecutable Autocontenido (`MaschineMK3AsPush.exe`)
 
-Podés descargar el paquete compilado listo para usar desde la sección de **[Releases](https://github.com/santiagojorda/maschine-mk3-driver/releases)**:
+Podés descargar el paquete compilado listo para usar desde la sección de **[Releases](https://github.com/santiagojorda/maschine-mk3-as-ableton-push/releases)**:
 
 ```bash
 # Iniciar el driver con supervisor automático

@@ -1,10 +1,10 @@
 @echo off
 setlocal
 
-rem Detectar si estamos en la raiz del proyecto o dentro de maschine-mk3-driver
-if exist "%~dp0maschine-mk3-driver" (
+rem Detectar si estamos en la carpeta ABLETON (la copia de control\) o dentro de Pantallas
+if exist "%~dp0maschine-mk3-as-ableton-push\Pantallas" (
     set "ROOT_DIR=%~dp0"
-    set "DRIVER_DIR=%~dp0maschine-mk3-driver"
+    set "DRIVER_DIR=%~dp0maschine-mk3-as-ableton-push\Pantallas"
 ) else (
     set "DRIVER_DIR=%~dp0"
     set "ROOT_DIR=%~dp0..\"
@@ -61,7 +61,7 @@ if exist "%VENV_PY%" (
     goto check_start
 )
 
-echo [!] Error: No se encontro el ejecutable ni el entorno .venv en maschine-mk3-driver.
+echo [!] Error: No se encontro el ejecutable ni el entorno .venv en Pantallas.
 goto end
 
 :start_already_running

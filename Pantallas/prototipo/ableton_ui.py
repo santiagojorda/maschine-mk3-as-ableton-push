@@ -13,7 +13,7 @@ import time
 
 from PIL import Image, ImageDraw, ImageFont
 
-from maschine_display import HEIGHT, WIDTH
+from maschine_mk3_driver.display import HEIGHT, WIDTH
 
 MIXER_VIEW = "default"
 DEVICE_VIEW = "device"

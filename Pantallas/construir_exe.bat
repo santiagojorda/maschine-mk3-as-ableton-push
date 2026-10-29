@@ -10,8 +10,8 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/3] Instalando dependencias de compilacion...
-.venv\Scripts\pip install -q pyinstaller
+echo [1/3] Instalando dependencias (incluida la libreria maschine-mk3-driver) y PyInstaller...
+.venv\Scripts\pip install -q -r requirements.txt pyinstaller
 if errorlevel 1 goto fallo
 
 echo [2/3] Generando icono...

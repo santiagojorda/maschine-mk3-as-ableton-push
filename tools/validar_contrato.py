@@ -5,7 +5,7 @@ Qué revisa:
   2. Ableton/CustomMaschineMK3/ControlElements.py: lo mismo con los elementos del script.
   3. Las constantes de CustomMaschineMK3.py: que cada (0xB1, n) sea un control del contrato, y que los dueños del
      contrato coincidan con lo que hace _accept_midi en cada modo (ver _ableton_reacciona).
-  4. mode.py de las pantallas (las dos copias, si están): los botones que cambian el modo.
+  4. Pantallas/prototipo/mode.py: los botones que cambian el modo.
   5. El mapeo de VirtualDJ: evalúa cada acción en cada modo ($vdj, $pads, $padlock) y avisa si VirtualDJ hace algo
      con un control que el contrato le da solo a Ableton, o si prende una luz que Ableton también maneja.
 
@@ -29,7 +29,7 @@ from contrato.controles import CONTROLES, DUENOS, MODOS, PANTALLA_COMPARTIDA, PO
 DEVICE = RAIZ / "VirtualDJ" / "Devices" / "MaschineMK3-VDJ.xml"
 MAPPER = RAIZ / "VirtualDJ" / "Mappers" / "MASCHINEMK3VDJ - Mapeo Personalizado.xml"
 SCRIPT = RAIZ / "Ableton" / "CustomMaschineMK3"
-MODE_PY = (RAIZ / "Pantallas" / "prototipo" / "mode.py", RAIZ.parent / "maschine-mk3-driver" / "prototipo" / "mode.py")
+MODE_PY = (RAIZ / "Pantallas" / "prototipo" / "mode.py",)
 
 # Variables del mapeo de VirtualDJ en cada modo de la Maschine (las demás quedan "desconocidas": se miran las dos ramas)
 ENTORNO_VDJ = {

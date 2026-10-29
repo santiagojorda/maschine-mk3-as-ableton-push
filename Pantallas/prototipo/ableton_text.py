@@ -21,7 +21,7 @@ import time
 
 from PIL import Image, ImageDraw, ImageFont
 
-from maschine_display import HEIGHT, WIDTH
+from maschine_mk3_driver.display import HEIGHT, WIDTH
 
 log = logging.getLogger("ableton")
 

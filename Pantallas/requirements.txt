@@ -1,7 +1,9 @@
-pyusb
-libusb-package
+# La librería de las pantallas (protocolo USB y captura): el repo hermano maschine-mk3-driver.
+# Con los dos repos clonados uno al lado del otro (pip se corre desde esta carpeta, Pantallas):
+-e ../../maschine-mk3-driver
+# Sin clonarlo, desde GitHub:
+#   maschine-mk3-driver @ git+https://github.com/santiagojorda/maschine-mk3-driver.git
 mido
 python-rtmidi
-mss
 pillow
 numpy

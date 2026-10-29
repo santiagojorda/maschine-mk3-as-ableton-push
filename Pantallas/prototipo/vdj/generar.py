@@ -76,7 +76,7 @@ def device_xml():
     lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         "<!--",
-        "  Datos para las pantallas de la Maschine MK3 (maschine-mk3-driver).",
+        "  Datos para las pantallas de la Maschine MK3 (Pantallas de maschine-mk3-as-ableton-push).",
         f'  Puerto virtual "{PORT_NAME}", creado por el prototipo. Generado por generar.py: no editar a mano.',
         "-->",
         f'<device name="{DEVICE_NAME}" author="Santiago Jorda" description="Pantallas Maschine MK3 (datos)" '

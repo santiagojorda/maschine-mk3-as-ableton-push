@@ -10,7 +10,7 @@ Uso: python pick_region.py
 import ctypes
 import json
 
-from screen_capture import set_dpi_aware
+from maschine_mk3_driver.screen_capture import set_dpi_aware
 
 
 class POINT(ctypes.Structure):

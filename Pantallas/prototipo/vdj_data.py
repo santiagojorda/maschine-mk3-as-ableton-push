@@ -14,14 +14,15 @@ import socket
 import threading
 from pathlib import Path
 
+import protocolo
 from paths import DATA_DIR
 import time
 import unicodedata
 
 SYSEX_ID = 0x7D  # "uso no comercial / experimental"
-BRIDGE_ADDRESS = ("127.0.0.1", 9018)  # vdj_puerto.py: acá se le piden todos los valores
-DATA_PORT = 9019  # vdj_puerto.py manda acá cada sysex (sin F0 / F7)
-REQUEST_ALL = b"todo"
+BRIDGE_ADDRESS = (protocolo.HOST, protocolo.VDJ_REQUEST_PORT)  # vdj_puerto.py: acá se le piden todos los valores
+DATA_PORT = protocolo.VDJ_DATA_PORT  # vdj_puerto.py manda acá cada sysex (sin F0 / F7)
+REQUEST_ALL = protocolo.REQUEST_ALL
 REPLAY_MARK = 0x52  # "R": vdj_puerto.py reenvía un valor guardado (no es un dato nuevo de VirtualDJ)
 PORT_STARTED_FILE = DATA_DIR / "vdj_puerto.started"
 
@@ -95,7 +96,7 @@ class VdjData:
         self.messages = 0
         self.last_live = time.time()  # último dato nuevo de VirtualDJ (no reenviado por vdj_puerto.py)
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self._socket.bind(("127.0.0.1", DATA_PORT))
+        self._socket.bind((protocolo.HOST, DATA_PORT))
         self._socket.settimeout(1.0)
         self._running = True
         self._thread = threading.Thread(target=self._loop, daemon=True)

@@ -15,7 +15,9 @@ import json
 import socket
 import time
 
-SCRIPT_ADDRESS = ("127.0.0.1", 9021)  # en el script de Ableton: VDJ_TEMPO_ADDRESS
+import protocolo
+
+SCRIPT_ADDRESS = (protocolo.HOST, protocolo.VDJ_TEMPO_PORT)  # en el script de Ableton: VDJ_TEMPO_ADDRESS
 SEND_EVERY_SECONDS = 0.5
 
 
@@ -63,7 +65,7 @@ class MasterBpmSender:
         self._last = now
         found = master_deck(vdj_data) if vdj_data is not None and self._is_open() else None
         self.last_found = found
-        message = {"t": time.time(), "bpm": round(found[1], 3) if found else None,
+        message = {"v": protocolo.VERSION, "t": time.time(), "bpm": round(found[1], 3) if found else None,
                    "deck": found[0] + 1 if found else None}
         try:
             self._socket.sendto(json.dumps(message).encode("ascii"), SCRIPT_ADDRESS)

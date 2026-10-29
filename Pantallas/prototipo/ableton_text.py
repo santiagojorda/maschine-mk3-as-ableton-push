@@ -23,12 +23,14 @@ from PIL import Image, ImageDraw, ImageFont
 
 from maschine_mk3_driver.display import HEIGHT, WIDTH
 
+import protocolo
+
 log = logging.getLogger("ableton")
 
 MCU_DISPLAY_HEADER = bytes((0xF0, 0x00, 0x00, 0x66, 0x17, 0x12))
 LINES = 4
 LINE_LENGTH = 28
-DEFAULT_PORT = 9017
+DEFAULT_PORT = protocolo.SCREENS_PORT
 
 # Líneas (arriba, abajo) de cada pantalla
 SCREEN_LINES = ((0, 2), (1, 3))
@@ -53,8 +55,9 @@ class AbletonText:
         self._tempo = (None, 0.0)  # tempo de Ableton que manda el script en modo DJ
         self._flash = (None, 0.0)  # (BPM, hasta cuándo) de la vista de tempo pasajera de SHIFT + TEMPO
         self.flash_version = 0
+        self._other_version = None  # versión del protocolo distinta que ya se avisó en el registro
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self._socket.bind(("127.0.0.1", port))
+        self._socket.bind((protocolo.HOST, port))
         self._socket.settimeout(0.5)
         self._running = True
         self._thread = threading.Thread(target=self._listen, daemon=True)
@@ -81,18 +84,24 @@ class AbletonText:
                 state = json.loads(data)
             except ValueError:
                 return
+            version = state.get("v")
+            if version != protocolo.VERSION and version != self._other_version:
+                # Se dibuja igual (los campos pueden no haber cambiado), pero queda dicho por qué podría verse mal
+                self._other_version = version
+                log.warning(f"El script de Ableton habla el protocolo v{version} y las pantallas el "
+                            f"v{protocolo.VERSION}: instalá los dos desde la misma rama")
             with self._lock:
                 now = time.perf_counter()
-                if state.get("type") == "tempo_flash":
+                if state.get("type") == protocolo.TYPE_TEMPO_FLASH:
                     # SHIFT + TEMPO igualó el tempo: la vista de tempo se ve unos segundos, en cualquier vista
                     self._flash = (state.get("bpm"), now + float(state.get("seconds", 3.0)))
                     self.flash_version += 1
                     return
-                if state.get("type") == "tempo":
+                if state.get("type") == protocolo.TYPE_TEMPO:
                     # En modo DJ, con el encoder en TEMPO: el tempo de Live para la vista de tempo
                     self._tempo = (state.get("bpm"), now)
                     return
-                if state.get("type") == "mode":
+                if state.get("type") == protocolo.TYPE_MODE:
                     # En modo VirtualDJ el script solo avisa el modo
                     self._reported = ("dj" if state.get("vdj") else "ableton", now)
                     return

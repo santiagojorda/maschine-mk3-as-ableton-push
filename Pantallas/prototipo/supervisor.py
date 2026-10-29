@@ -22,6 +22,7 @@ import threading
 import time
 from pathlib import Path
 
+import protocolo
 from paths import DATA_DIR, child_command
 
 HERE = Path(__file__).resolve().parent
@@ -31,7 +32,7 @@ HEARTBEAT_FILE = DATA_DIR / "dj_screens.heartbeat"
 STOP_FILE = DATA_DIR / "detener"  # dj_screens.py lo mira y se cierra solo, terminando el cuadro que manda
 ALREADY_RUNNING = 2
 DATED_LINE = re.compile(r"^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d ")
-SINGLE_INSTANCE_ADDRESS = ("127.0.0.1", 9020)
+SINGLE_INSTANCE_ADDRESS = (protocolo.HOST, protocolo.SUPERVISOR_PORT)
 HEARTBEAT_TIMEOUT = 15.0  # sin pulso por más que esto = colgado
 STARTUP_GRACE = 30.0  # al arrancar puede tardar (Windows recién iniciado, la Maschine apagada...)
 CHECK_EVERY = 1.0
@@ -211,10 +212,10 @@ def main():
                     time.sleep(1.0)  # que el puerto exista antes de que dj_screens.py lo busque
             try:
                 message = lock.recvfrom(64)[0]
-                if message == b"salir":
+                if message == protocolo.QUIT:
                     log.write("[supervisor] cerrado con --salir")
                     break
-                if message == b"reiniciar":
+                if message == protocolo.RESTART:
                     screens.restart_requested()
             except OSError:
                 pass  # nada pendiente

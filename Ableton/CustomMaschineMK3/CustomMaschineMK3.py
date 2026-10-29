@@ -97,6 +97,7 @@ from .PageableBackgroundComponent import PageableBackgroundComponent
 
 from .Logger import logger
 from . import Config
+from . import Protocolo
 
 # VirtualDJ mode: "SAMPLING" hands the Maschine over to VirtualDJ, "PLUGIN" or "MIXER" brings it back.
 # (status byte, CC number) of each button, all of them on MIDI channel 2
@@ -119,7 +120,7 @@ STANDBY_BUTTON = (0xB1, 34)
 SHIFT_BUTTON = (0xB1, 119)
 # SHIFT + MACRO asks the screens' supervisor (the driver) to restart the screens, in case they freeze or draw garbage
 MACRO_BUTTON = (0xB1, 43)
-SCREENS_SUPERVISOR_ADDRESS = ("127.0.0.1", 9020)
+SCREENS_SUPERVISOR_ADDRESS = (Protocolo.HOST, Protocolo.SUPERVISOR_PORT)
 # TEMPO mode of the encoder: turning moves the tempo in whole BPM (90.09 -> 91.00 up, 89.00 down; with SHIFT it stays
 # fine), and SHIFT + TEMPO, in any view, sets it to the tempo of the VirtualDJ deck the driver picks as reference
 # without changing the view. The driver (vdj_master.py) sends it here by UDP twice a second
@@ -130,7 +131,7 @@ TEMPO_BUTTON = (0xB1, 47)
 # playing into a new scene, like Push's "capture and insert scene" (it used to be the fixed length recording button)
 SCENE_BUTTON = (0xB1, 85)
 PATTERN_BUTTON = (0xB1, 86)
-VDJ_TEMPO_ADDRESS = ("127.0.0.1", 9021)
+VDJ_TEMPO_ADDRESS = (Protocolo.HOST, Protocolo.VDJ_TEMPO_PORT)
 TEMPO_FLASH_SECONDS = 3.0  # how long SHIFT + TEMPO shows the tempo view when it wasn't the one on screen
 VDJ_TEMPO_MAX_AGE = 3.0  # seconds: older than this, the driver isn't sending (closed) and the number can't be trusted
 TEMPO_RANGE = (20.0, 999.0)  # Live's own limits
@@ -167,7 +168,10 @@ PAD_NOTES = range(60, 76)
 # it also gets a JSON state (view, the 8 knob parameters, their tracks' meters, touched knob)
 # so it can draw faders and knobs instead of text.
 MCU_DISPLAY_HEADER = (0xF0, 0x00, 0x00, 0x66, 0x17, 0x12)
-SCREEN_BRIDGE_ADDRESS = ("127.0.0.1", Config.SCREEN_BRIDGE_PORT)
+SCREEN_BRIDGE_ADDRESS = (Protocolo.HOST, Config.SCREEN_BRIDGE_PORT)
+# Every JSON message carries the protocol version (Protocolo.VERSION), so the screens can tell when they and the
+# script come from different installs
+SCREEN_BRIDGE_MODE_VDJ = json.dumps({"v": Protocolo.VERSION, "type": Protocolo.TYPE_MODE, "vdj": True}).encode("ascii")
 SCREEN_BRIDGE_INTERVAL_MS = 50
 SCREEN_BRIDGE_STALL_SECONDS = 0.5
 SCREEN_BRIDGE_RESEND_TICKS = 20  # display lines are resent about once per second (at 20 FPS)
@@ -1288,6 +1292,10 @@ class CustomMaschineMK3(ControlSurface):
                 continue
         if latest is not None:
             self._vdj_tempo_last = latest
+            if latest.get("v") != Protocolo.VERSION:
+                # Still used (the fields may be the same), but the log says why it could go wrong
+                self._log_error_once("protocol version", f"the screens driver sends protocol v{latest.get('v')}, "
+                                     f"the script expects v{Protocolo.VERSION}: install both from the same branch")
         message = self._vdj_tempo_last
         if not message or time.time() - message.get("t", 0) > VDJ_TEMPO_MAX_AGE:
             return None
@@ -1308,7 +1316,8 @@ class CustomMaschineMK3(ControlSurface):
                 text = f"Tempo set to VirtualDJ deck {message.get('deck')}: {self.song.tempo:.2f} BPM"
                 # The screens show the tempo view for a few seconds and go back to the view they were on (TEMPO alone
                 # is what switches to it for good)
-                self._send_to_screen_bridge(json.dumps({"type": "tempo_flash", "bpm": self.song.tempo,
+                self._send_to_screen_bridge(json.dumps({"v": Protocolo.VERSION, "type": Protocolo.TYPE_TEMPO_FLASH,
+                                                        "bpm": self.song.tempo,
                                                         "seconds": TEMPO_FLASH_SECONDS}).encode("ascii"))
         self._log(f"SHIFT + click in TEMPO: {text}")
         self._c_instance.show_message(text)
@@ -1317,7 +1326,7 @@ class CustomMaschineMK3(ControlSurface):
         # The supervisor closes the screens in an orderly way and starts them again (it ignores a second request
         # within a few seconds). If it isn't running nothing answers, and the press is harmless
         try:
-            self._screen_bridge.sendto(b"reiniciar", SCREENS_SUPERVISOR_ADDRESS)
+            self._screen_bridge.sendto(Protocolo.RESTART, SCREENS_SUPERVISOR_ADDRESS)
             self._log("SHIFT + MACRO: screens restart requested")
             self._c_instance.show_message("Restarting the screens...")
         except (OSError, AttributeError):
@@ -1365,9 +1374,10 @@ class CustomMaschineMK3(ControlSurface):
         # In VirtualDJ mode the display belongs to VirtualDJ: the bridge only learns the mode, so it can
         # pick it up when it starts while VirtualDJ mode is on
         if self._vdj_mode:
-            self._send_to_screen_bridge(b'{"type":"mode","vdj":true}')
+            self._send_to_screen_bridge(SCREEN_BRIDGE_MODE_VDJ)
             if self._encoder_tempo_mode():
-                self._send_to_screen_bridge(json.dumps({"type": "tempo", "bpm": self.song.tempo}).encode("ascii"))
+                self._send_to_screen_bridge(json.dumps({"v": Protocolo.VERSION, "type": Protocolo.TYPE_TEMPO,
+                                                        "bpm": self.song.tempo}).encode("ascii"))
         else:
             self._carry_selection_with_ring()
             self._send_screen_bridge_state()
@@ -1414,7 +1424,7 @@ class CustomMaschineMK3(ControlSurface):
 
     def _screen_bridge_state(self):
         if self._standby:
-            return {"type": "state", "standby": True}
+            return {"v": Protocolo.VERSION, "type": Protocolo.TYPE_STATE, "standby": True}
         knobs = []
         for index in range(KNOB_COUNT):
             parameter = self._get_knob_mapped_parameter(index)
@@ -1467,7 +1477,8 @@ class CustomMaschineMK3(ControlSurface):
             # The mixer shows the session grid's tracks: which of its 8 columns are on the pads
             "grid_frame": self._screen_bridge_grid_frame() if view == MIXER_DISPLAY_MODE else None,
             "session": self._screen_bridge_session() if self._session_view else None,
-            "type": "state",
+            "v": Protocolo.VERSION,
+            "type": Protocolo.TYPE_STATE,
             "view": view,
             "encoder_mode": encoder_mode,
             "mixer_parameter": getattr(self.component_map["Mixer"], "parameter_name", None),

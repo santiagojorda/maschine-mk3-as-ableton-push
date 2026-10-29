@@ -136,7 +136,7 @@ cd /d "%ROOT_DIR%"
 python rendimiento\marca.py --cerrar >nul 2>&1
 ping 127.0.0.1 -n 6 >nul
 
-python -c "import socket; s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.settimeout(0.5); s.sendto(b'salir', ('127.0.0.1', 9020)); s.close()" >nul 2>&1
+python -c "import socket, sys; sys.path.insert(0, r'%DRIVER_DIR%prototipo'); import protocolo as p; s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.settimeout(0.5); s.sendto(p.QUIT, (p.HOST, p.SUPERVISOR_PORT)); s.close()" >nul 2>&1
 
 ping 127.0.0.1 -n 2 >nul
 

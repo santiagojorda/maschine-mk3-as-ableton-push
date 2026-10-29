@@ -23,6 +23,7 @@ import threading
 import time
 from pathlib import Path
 
+import protocolo
 import registro
 from paths import DATA_DIR
 from vdj_data import BRIDGE_ADDRESS, DATA_PORT, PORT_STARTED_FILE, REPLAY_MARK, REQUEST_ALL, SYSEX_ID
@@ -79,7 +80,7 @@ class PortBridge:
 
     def _send(self, message):
         try:
-            self._socket.sendto(message, ("127.0.0.1", DATA_PORT))
+            self._socket.sendto(message, (protocolo.HOST, DATA_PORT))
         except OSError:
             pass
 

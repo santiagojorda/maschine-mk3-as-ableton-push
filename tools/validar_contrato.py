@@ -8,10 +8,13 @@ Qué revisa:
   4. Pantallas/prototipo/mode.py: los botones que cambian el modo.
   5. El mapeo de VirtualDJ: evalúa cada acción en cada modo ($vdj, $pads, $padlock) y avisa si VirtualDJ hace algo
      con un control que el contrato le da solo a Ableton, o si prende una luz que Ableton también maneja.
+  6. contrato/protocolo.py: que sus dos copias (script y pantallas) sean iguales y que ningún archivo tenga un
+     puerto UDP escrito a mano.
 
 Uso:  python tools/validar_contrato.py            errores y avisos
       python tools/validar_contrato.py --tabla    además, la tabla de dueños por modo
       python tools/validar_contrato.py --todo     además, lo informativo (seguimiento "de oído", controles libres)
+      python tools/validar_contrato.py --arreglar vuelve a copiar contrato/protocolo.py a sus dos copias
 Sale con código 1 si hay errores.
 """
 
@@ -527,6 +530,38 @@ def _destino(destino):
     return f"la luz de {control.nombre}" if control else nombre_direccion(destino)
 
 
+# --- 6. Protocolo entre programas ------------------------------------------------------------------------------
+
+PROTOCOLO = RAIZ / "contrato" / "protocolo.py"
+COPIAS_PROTOCOLO = (SCRIPT / "Protocolo.py", RAIZ / "Pantallas" / "prototipo" / "protocolo.py")
+
+
+def revisar_protocolo(informe, arreglar):
+    fuente = PROTOCOLO.read_bytes()
+    for copia in COPIAS_PROTOCOLO:
+        if copia.exists() and copia.read_bytes().replace(b"\r\n", b"\n") == fuente.replace(b"\r\n", b"\n"):
+            continue
+        if arreglar:
+            copia.write_bytes(fuente)
+            informe.nota(f"{copia.relative_to(RAIZ)}: copiado de nuevo desde contrato/protocolo.py")
+        else:
+            informe.error(f"{copia.relative_to(RAIZ)} no es igual a contrato/protocolo.py (--arreglar lo copia)")
+    # Ningún archivo tiene que tener un puerto escrito a mano: todos salen de protocolo.py
+    valores = {}
+    exec(compile(fuente, str(PROTOCOLO), "exec"), valores)
+    puertos = {valor: nombre for nombre, valor in valores.items() if nombre.endswith("_PORT")}
+    patron = re.compile(r"\b(" + "|".join(str(p) for p in puertos) + r")\b")
+    archivos = [*SCRIPT.glob("*.py"), *(RAIZ / "Pantallas").rglob("*.py"), *(RAIZ / "Pantallas").glob("*.bat"),
+                *(RAIZ / "tools").glob("*.py")]
+    for archivo in archivos:
+        if archivo in COPIAS_PROTOCOLO or ".venv" in archivo.parts:
+            continue
+        for numero, linea in enumerate(archivo.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+            for encontrado in patron.findall(linea):
+                informe.error(f"{archivo.relative_to(RAIZ)}:{numero}: el puerto {encontrado} está escrito a mano "
+                              f"(usar protocolo.{puertos[int(encontrado)]})")
+
+
 # --- Tabla y salida --------------------------------------------------------------------------------------------
 
 def tabla():
@@ -543,6 +578,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--tabla", action="store_true", help="mostrar la tabla de dueños por modo")
     parser.add_argument("--todo", action="store_true", help="mostrar también lo informativo")
+    parser.add_argument("--arreglar", action="store_true", help="volver a copiar contrato/protocolo.py a sus copias")
     args = parser.parse_args()
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
@@ -557,6 +593,7 @@ def main():
     revisar_duenos_ableton(informe, reacciona)
     revisar_mode_py(informe)
     revisar_mapper(informe, entradas, salidas, _luces_de_ableton(constantes, zona_pads_y_lock))
+    revisar_protocolo(informe, args.arreglar)
 
     if args.tabla:
         print(tabla(), end="\n\n")

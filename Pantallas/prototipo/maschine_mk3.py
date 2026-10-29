@@ -13,6 +13,7 @@ import shutil
 import socket
 import sys
 
+import protocolo
 from paths import BUNDLE_DIR, FROZEN, message_box
 
 
@@ -32,7 +33,7 @@ def _fix_stdio():
 def _stop():
     from supervisor import SINGLE_INSTANCE_ADDRESS
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.sendto(b"salir", SINGLE_INSTANCE_ADDRESS)
+    sock.sendto(protocolo.QUIT, SINGLE_INSTANCE_ADDRESS)
     sock.close()
     message_box("Pantallas detenidas.")
 

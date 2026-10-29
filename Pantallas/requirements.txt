@@ -1,0 +1,7 @@
+pyusb
+libusb-package
+mido
+python-rtmidi
+mss
+pillow
+numpy

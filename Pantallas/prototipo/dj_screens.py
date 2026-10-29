@@ -47,6 +47,7 @@ from encoder_view import render_ableton as render_ableton_encoder
 from vdj_browser import BrowserView
 from vdj_data import BRIDGE_ADDRESS, VdjData
 from vdj_master import MasterBpmSender
+from vdj_sync import VdjModeSync
 from maschine_mk3_driver.window_capture import BackgroundWindowCapture
 
 STATS_EVERY_S = 5.0
@@ -281,6 +282,7 @@ def main():
     ableton_text = AbletonText(config["ableton_text_port"])
     master_bpm = MasterBpmSender(is_open=lambda: capture.process_started() is not None
                                  if hasattr(capture, "process_started") else True)
+    vdj_mode_sync = VdjModeSync()
     start_vdj_port()
     try:
         vdj_data = VdjData()
@@ -349,6 +351,7 @@ def main():
                   log.info("(modo tomado del script de Ableton)")
               new_mode = watcher.mode
               master_bpm.maybe_send(vdj_data)
+              vdj_mode_sync.maybe_send(ableton_text.routing(), watcher.last_button_time)
               flash = ableton_text.tempo_flash()
               if ableton_text.flash_version != flash_seen:
                   flash_seen = ableton_text.flash_version

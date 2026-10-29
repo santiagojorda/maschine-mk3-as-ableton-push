@@ -5,8 +5,10 @@ Cada paso dice quién reaccionó: Ableton (dejó pasar el mensaje a Live, cambi�
 oye) y VirtualDJ (lo que haría: deck, crossfader...). Lo que VirtualDJ pregunta a un deck o al browser se toma como
 falso, y un <button> de VirtualDJ corre su acción al apretarlo (un <slider>, también al soltarlo).
 
-Los dos casos de ANALISIS-ACOPLAMIENTO.md en que los programas se desincronizan están acá como expectedFailure:
-documentan el bug. Cuando la fase 4 lo arregle, pasan a "unexpected success" y se les saca la marca.
+Las pantallas le reenvían a VirtualDJ el modo que decide el script (Pantallas/prototipo/vdj_sync.py, por el puerto
+"MK3 Screens", con el mapeo de Pantallas/prototipo/vdj): la simulación lo hace después de cada paso, como si pasara un
+segundo, mientras Live esté abierto. Así no se desincronizan aunque uno de los dos se reinicie
+(ANALISIS-ACOPLAMIENTO.md, 3.1 y 3.2).
 """
 
 import unittest
@@ -18,11 +20,15 @@ import vdjscript
 
 DEVICE = RAIZ / "VirtualDJ" / "Devices" / "MaschineMK3-VDJ.xml"
 MAPPER = RAIZ / "VirtualDJ" / "Mappers" / "MASCHINEMK3VDJ - Mapeo Personalizado.xml"
+MAPPER_DATOS = RAIZ / "Pantallas" / "prototipo" / "vdj" / "MK3SCREENS - Datos pantallas.xml"
 SHIFT_MK3 = (0xF0, 0x00, 0x21, 0x09, 0x16, 0x00, 0x4D, 0x50, 0x00, 0x01, 0x4D)
 
 ROUTER = cargar_router()
 TIPO_EN_VDJ = {e.get("name"): e.tag for e in ET.parse(DEVICE).getroot()}
 ACCIONES_VDJ = {m.get("value"): vdjscript.analizar(m.get("action")) for m in ET.parse(MAPPER).getroot() if m.tag == "map"}
+# Las entradas del puerto "MK3 Screens" (el modo que decide el script) comparten las variables $ con el mapeo
+ACCIONES_VDJ.update({m.get("value"): vdjscript.analizar(m.get("action"))
+                     for m in ET.parse(MAPPER_DATOS).getroot() if m.get("value", "").startswith("ABLETON_")})
 
 
 class Respuesta:
@@ -37,18 +43,35 @@ class Maschine:
     """La Maschine conectada a Live (con el script) y a VirtualDJ al mismo tiempo."""
 
     def __init__(self, ableton_en_reposo=False):
+        self.vdj = {}
         self.reiniciar_live(ableton_en_reposo)
         self.reiniciar_vdj()
 
     def reiniciar_live(self, en_reposo=True):
         # El script arranca en reposo (Config.START_IN_STANDBY) y con todo el estado de ruteo en cero
         self.ableton = ROUTER.MidiRouter(standby=en_reposo, clock=lambda: 0.0)
+        self.sincronizar()
+
+    def cerrar_live(self):
+        self.ableton = None
 
     def reiniciar_vdj(self):
-        self.vdj = {}
+        self.vdj.clear()
         vdjscript.ejecutar(ACCIONES_VDJ["ONINIT"], self.vdj)
+        self.sincronizar()
+
+    def sincronizar(self):
+        """Lo que hacen vdj_sync.py y vdj_puerto.py cada segundo: el modo del script, a VirtualDJ (pads fijados
+        primero). Con Live cerrado no se manda nada."""
+        if self.ableton is None:
+            return
+        dj, fijados = self.ableton.vdj_mode, self.ableton.pad_lock and not self.ableton.standby
+        self._a_vdj("ABLETON_LOCK", 1.0 if fijados else 0.0)
+        self._a_vdj("ABLETON_DJ", 1.0 if dj else 0.0)
 
     def _a_ableton(self, mensaje):
+        if self.ableton is None:
+            return False
         antes = (self.ableton.standby, self.ableton.vdj_mode, self.ableton.pad_lock)
         efectos = []
         pasa = self.ableton.accept(mensaje, Entorno(), lambda nombre, *a: efectos.append(nombre))
@@ -70,17 +93,20 @@ class Maschine:
         ableton = self._a_ableton((estado, control.numero, 0)) or ableton
         if TIPO_EN_VDJ.get(control.vdj) == "slider":
             vdj += self._a_vdj(control.vdj, 0.0)
+        self.sincronizar()
         return Respuesta(ableton, vdj)
 
     def girar(self, nombre):
         """Girar una perilla un paso a la derecha."""
         control = POR_NOMBRE[nombre]
-        return Respuesta(self._a_ableton((0xB0 | (control.canal - 1), control.numero, 1)),
-                         self._a_vdj(control.vdj, 1.0))
+        respuesta = Respuesta(self._a_ableton((0xB0 | (control.canal - 1), control.numero, 1)),
+                              self._a_vdj(control.vdj, 1.0))
+        self.sincronizar()
+        return respuesta
 
     def shift(self, apretado):
         # El MK3 manda SHIFT por sysex: lo leen los dos
-        self.ableton.accept(SHIFT_MK3 + (1 if apretado else 0, 0xF7), Entorno(), lambda *a: None)
+        self._a_ableton(SHIFT_MK3 + (1 if apretado else 0, 0xF7))
         self._a_vdj("SHIFT_ON" if apretado else "SHIFT_OFF", 1.0)
 
     @property
@@ -159,9 +185,8 @@ class PadLock(unittest.TestCase):
 
 
 class Desincronizaciones(unittest.TestCase):
-    """ANALISIS-ACOPLAMIENTO.md, secciones 3.1 y 3.2. Se arreglan en la fase 4 (un solo dueño del modo)."""
+    """ANALISIS-ACOPLAMIENTO.md, secciones 3.1 y 3.2: el script es el dueño del modo y VirtualDJ lo sigue."""
 
-    @unittest.expectedFailure
     def test_live_reiniciado_en_modo_dj_no_deja_a_los_dos_respondiendo(self):
         m = Maschine()
         m.apretar("SAMPLING")
@@ -169,14 +194,34 @@ class Desincronizaciones(unittest.TestCase):
         m.apretar("CHANNEL")  # despierta a Ableton en modo Ableton
         r = m.girar("KNOB1")
         self.assertFalse(r.ableton and r.vdj, f"responden los dos: {r}")
+        self.assertFalse(m.vdj_en_modo_dj)
 
-    @unittest.expectedFailure
     def test_virtualdj_reiniciado_en_modo_dj_no_deja_la_maschine_muerta(self):
         m = Maschine()
         m.apretar("SAMPLING")
         m.reiniciar_vdj()  # VirtualDJ arranca fuera del modo DJ; Ableton sigue en modo DJ
         r = m.girar("KNOB1")
         self.assertTrue(r.ableton or r.vdj, f"no responde nadie: {r}")
+        self.assertTrue(r.vdj and not r.ableton, r)
+
+    def test_virtualdj_reiniciado_con_lock_recupera_los_pads(self):
+        m = Maschine()
+        m.apretar("SAMPLING")
+        m.apretar("LOCK")
+        m.apretar("MIXER")
+        m.reiniciar_vdj()
+        r = m.apretar("PAD13")
+        self.assertTrue(r.vdj and not r.ableton, r)
+
+    def test_sin_live_virtualdj_funciona_solo(self):
+        m = Maschine()
+        m.cerrar_live()
+        m.reiniciar_vdj()
+        m.apretar("SAMPLING")
+        self.assertTrue(m.vdj_en_modo_dj)
+        self.assertTrue(m.girar("KNOB1").vdj)
+        m.apretar("MIXER")
+        self.assertFalse(m.vdj_en_modo_dj)
 
 
 if __name__ == "__main__":

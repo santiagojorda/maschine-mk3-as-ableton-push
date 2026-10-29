@@ -46,9 +46,14 @@ class PortBridge:
         dll.virtualMIDICreatePortEx2.restype = ctypes.c_void_p
         dll.virtualMIDICreatePortEx2.argtypes = [W.LPCWSTR, _MIDI_DATA_CALLBACK, ctypes.c_void_p, W.DWORD, W.DWORD]
         self._callback = _MIDI_DATA_CALLBACK(self._on_data)  # hay que guardar la referencia
+        # Sin flags: el puerto va en los dos sentidos (VirtualDJ manda los datos de los decks y recibe el modo)
         self._port = dll.virtualMIDICreatePortEx2(PORT_NAME, self._callback, None, 0x1FFFE, 0)
         if not self._port:
             raise RuntimeError(f"No se pudo crear el puerto virtual '{PORT_NAME}' (¿está instalado loopMIDI / teVirtualMIDI?)")
+        dll.virtualMIDISendData.restype = W.BOOL
+        dll.virtualMIDISendData.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_ubyte), W.DWORD]
+        self._dll = dll
+        self._mode = None  # último modo mandado a VirtualDJ, para el registro
 
     def _on_data(self, port, data, length, instance):
         # Un error acá no puede cortar el programa (lo llama el driver)
@@ -83,6 +88,18 @@ class PortBridge:
             self._socket.sendto(message, (protocolo.HOST, DATA_PORT))
         except OSError:
             pass
+
+    def send_mode(self, vdj, pad_lock):
+        """El modo que decide el script de Ableton, para el mapeo de VirtualDJ de este puerto (vdj/generar.py):
+        pads fijados primero, así cuando llega el modo DJ el mapeo ya sabe si los pads quedan en VirtualDJ."""
+        if (vdj, pad_lock) != self._mode:
+            log.info(f"Modo para VirtualDJ: DJ {vdj}, pads fijados {pad_lock}")
+            self._mode = (vdj, pad_lock)
+        for cc, on in ((protocolo.VDJ_SYNC_CC_LOCK, pad_lock), (protocolo.VDJ_SYNC_CC_DJ, vdj)):
+            message = (ctypes.c_ubyte * 3)(0xB0, cc, 127 if on else 0)
+            if not self._dll.virtualMIDISendData(self._port, message, 3):
+                log.warning("No se pudo mandar el modo a VirtualDJ (¿está abierto?)")
+                return
 
     def send_all(self):
         with self._lock:
@@ -120,6 +137,8 @@ def main():
             request, _ = sock.recvfrom(64)
             if request == REQUEST_ALL:
                 bridge.send_all()
+            elif request.startswith(protocolo.VDJ_SYNC) and len(request) == len(protocolo.VDJ_SYNC) + 2:
+                bridge.send_mode(bool(request[-2]), bool(request[-1]))
         except (socket.timeout, ConnectionResetError):
             pass
         except OSError:

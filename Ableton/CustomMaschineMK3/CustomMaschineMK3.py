@@ -127,8 +127,13 @@ VDJ_REFRESH_DELAY = 1
 MCU_DISPLAY_HEADER = (0xF0, 0x00, 0x00, 0x66, 0x17, 0x12)
 SCREEN_BRIDGE_ADDRESS = (Protocolo.HOST, Config.SCREEN_BRIDGE_PORT)
 # Every JSON message carries the protocol version (Protocolo.VERSION), so the screens can tell when they and the
-# script come from different installs
-SCREEN_BRIDGE_MODE_VDJ = json.dumps({"v": Protocolo.VERSION, "type": Protocolo.TYPE_MODE, "vdj": True}).encode("ascii")
+# script come from different installs. The mode messages (and the state) also say whether the pads are locked to
+# VirtualDJ: this script owns the mode, and the screens pass it on to VirtualDJ's mapping so both stay in step
+SCREEN_BRIDGE_MODE_VDJ = {
+    pad_lock: json.dumps({"v": Protocolo.VERSION, "type": Protocolo.TYPE_MODE, "vdj": True,
+                          "pad_lock": pad_lock}).encode("ascii")
+    for pad_lock in (False, True)
+}
 SCREEN_BRIDGE_INTERVAL_MS = 50
 SCREEN_BRIDGE_STALL_SECONDS = 0.5
 SCREEN_BRIDGE_RESEND_TICKS = 20  # display lines are resent about once per second (at 20 FPS)
@@ -1098,7 +1103,7 @@ class CustomMaschineMK3(ControlSurface):
         # In VirtualDJ mode the display belongs to VirtualDJ: the bridge only learns the mode, so it can
         # pick it up when it starts while VirtualDJ mode is on
         if self._vdj_mode:
-            self._send_to_screen_bridge(SCREEN_BRIDGE_MODE_VDJ)
+            self._send_to_screen_bridge(SCREEN_BRIDGE_MODE_VDJ[self._pad_lock])
             if self._encoder_tempo_mode():
                 self._send_to_screen_bridge(json.dumps({"v": Protocolo.VERSION, "type": Protocolo.TYPE_TEMPO,
                                                         "bpm": self.song.tempo}).encode("ascii"))
@@ -1203,6 +1208,7 @@ class CustomMaschineMK3(ControlSurface):
             "session": self._screen_bridge_session() if self._session_view else None,
             "v": Protocolo.VERSION,
             "type": Protocolo.TYPE_STATE,
+            "pad_lock": self._pad_lock,
             "view": view,
             "encoder_mode": encoder_mode,
             "mixer_parameter": getattr(self.component_map["Mixer"], "parameter_name", None),

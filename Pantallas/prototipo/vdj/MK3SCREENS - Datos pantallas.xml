@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mapper device="MK3SCREENS" author="Santiago Jorda" version="800" date="2026-10-08">
+<mapper device="MK3SCREENS" author="Santiago Jorda" version="800" date="2026-10-29">
+  <map value="ABLETON_LOCK" action="(param_bigger 0.5 ? set '$padlock' 1 : set '$padlock' 0) &amp; (var '$vdj' ? set '$pads' 1 : (var '$padlock' ? set '$pads' 1 : set '$pads' 0))" />
+  <map value="ABLETON_DJ" action="(param_bigger 0.5 ? (var '$vdj' ? nothing : (set '$vdj' 1 &amp; set '$encmode' 0 &amp; set '$select' 0 &amp; (var '$padlock' ? nothing : set '$padpage' 1))) : (var '$vdj' ? (set '$vdj' 0 &amp; set '$select' 0 &amp; set '$encmode' 0) : nothing)) &amp; (var '$vdj' ? set '$pads' 1 : (var '$padlock' ? set '$pads' 1 : set '$pads' 0))" />
   <map value="D1_TITLE" action="deck 1 get_title" />
   <map value="D1_ARTIST" action="deck 1 get_artist" />
   <map value="D1_BPM" action="deck 1 get_bpm &amp; param_multiply 1000 &amp; param_cast 'integer' &amp; param_cast 'text' 10" />

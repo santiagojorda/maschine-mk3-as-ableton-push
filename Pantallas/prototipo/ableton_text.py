@@ -52,6 +52,7 @@ class AbletonText:
         self._state_time = 0.0
         self.state_version = 0
         self._reported = (None, 0.0)
+        self._routing = (None, None, 0.0)  # (modo DJ, pads fijados, cuándo): lo que decide el script de Ableton
         self._tempo = (None, 0.0)  # tempo de Ableton que manda el script en modo DJ
         self._flash = (None, 0.0)  # (BPM, hasta cuándo) de la vista de tempo pasajera de SHIFT + TEMPO
         self.flash_version = 0
@@ -107,8 +108,11 @@ class AbletonText:
                 if state.get("type") == protocolo.TYPE_MODE:
                     # En modo VirtualDJ el script solo avisa el modo
                     self._reported = ("dj" if state.get("vdj") else "ableton", now)
+                    self._routing = (bool(state.get("vdj")), bool(state.get("pad_lock")), now)
                     return
                 self._reported = ("ableton", now)
+                # En reposo el script ya soltó el modo DJ y los pads
+                self._routing = (False, bool(state.get("pad_lock")) and not state.get("standby"), now)
                 self._state = state
                 self._state_time = now
                 self.state_version += 1
@@ -135,6 +139,13 @@ class AbletonText:
         with self._lock:
             mode, when = self._reported
             return mode if mode and time.perf_counter() - when <= max_age else None
+
+    def routing(self, max_age=1.0):
+        """(modo DJ, pads fijados a VirtualDJ) según el script de Ableton, o None si no avisó hace poco (Live
+        cerrado o el script sin cargar): entonces VirtualDJ sigue con lo suyo."""
+        with self._lock:
+            vdj, pad_lock, when = self._routing
+            return (vdj, pad_lock) if vdj is not None and time.perf_counter() - when <= max_age else None
 
     def tempo(self, max_age=1.0):
         """El tempo de Ableton (BPM) que mandó el script en modo DJ, o None si no llegó o es viejo."""

@@ -62,6 +62,15 @@ Cada columna de `session.tracks`: `{name, color, target, mute, solo, slots}`. Ca
 
 `vdj_puerto.py` mantiene abierto el puerto MIDI virtual "MK3 Screens", por donde VirtualDJ manda el estado de los decks (`F0 7D <campo> <texto> F7`, ver `Pantallas/prototipo/vdj/generar.py`). Reenvía cada sysex sin `F0` / `F7` a **9019**. Cuando las pantallas mandan `REQUEST_ALL` (`b"todo"`) a **9018**, vuelve a mandar el último valor de cada campo, marcado con `0x52` ("R") adelante.
 
+### Un solo dueño del modo: el script de Ableton
+
+El script decide el modo (modo DJ y pads fijados con LOCK) y VirtualDJ lo sigue. Así no se desincronizan si uno de los dos se reinicia (`ANALISIS-ACOPLAMIENTO.md`, 3.1 y 3.2):
+
+1. El script lo informa en cada mensaje: `mode` (`"vdj": true`, `"pad_lock"`) y `state` (`"pad_lock"`; en reposo, `"standby": true`, que suelta los dos).
+2. `vdj_sync.py` (pantallas) manda `VDJ_SYNC` + 2 bytes (modo DJ 0/1, pads fijados 0/1) a **9018**, apenas cambia y cada segundo. Si el script no avisó en el último segundo (Live cerrado), no manda nada, y VirtualDJ sigue con su propia lógica. Justo después de un botón de modo espera un segundo: los dos programas lo están procesando.
+3. `vdj_puerto.py` lo pasa al puerto "MK3 Screens" como dos Control Change en el canal 1: primero `VDJ_SYNC_CC_LOCK` (2) y después `VDJ_SYNC_CC_DJ` (1), con valor 127 (sí) o 0 (no).
+4. El mapeo de ese puerto (`ABLETON_LOCK`, `ABLETON_DJ`) corrige `$padlock`, `$vdj` y `$pads` solo si no coinciden. Son variables `$`, globales en VirtualDJ, así que las comparte con el mapeo de la Maschine.
+
 ## 9020 · Supervisor de las pantallas
 
 | Mensaje | Lo manda | Qué hace |

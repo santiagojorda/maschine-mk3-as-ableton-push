@@ -27,3 +27,10 @@ TYPE_TEMPO_FLASH = "tempo_flash"
 QUIT = b"salir"
 RESTART = b"reiniciar"
 REQUEST_ALL = b"todo"
+
+# Un solo dueño del modo: el script de Ableton decide (modo DJ, pads fijados con LOCK) y las pantallas se lo reenvían
+# a VirtualDJ. A VDJ_REQUEST_PORT va VDJ_SYNC + 2 bytes (modo DJ 0/1, pads fijados 0/1); vdj_puerto.py lo pasa al
+# puerto "MK3 Screens" como dos Control Change en el canal MIDI 1 (127 = sí), que el mapeo de ese puerto aplica
+VDJ_SYNC = b"modo"
+VDJ_SYNC_CC_DJ = 1
+VDJ_SYNC_CC_LOCK = 2

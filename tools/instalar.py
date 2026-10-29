@@ -31,8 +31,11 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 NOMBRE_INSTALADO = "Maschine_as_Push"
 ORIGEN_SCRIPT = "Ableton/CustomMaschineMK3"
+# El mapeo de la Maschine y el del puerto "MK3 Screens" (datos para las pantallas y el modo que decide el script)
 ORIGEN_VDJ = {"VirtualDJ/Devices/MaschineMK3-VDJ.xml": "Devices",
-              "VirtualDJ/Mappers/MASCHINEMK3VDJ - Mapeo Personalizado.xml": "Mappers"}
+              "VirtualDJ/Mappers/MASCHINEMK3VDJ - Mapeo Personalizado.xml": "Mappers",
+              "Pantallas/prototipo/vdj/MK3-Screens.xml": "Devices",
+              "Pantallas/prototipo/vdj/MK3SCREENS - Datos pantallas.xml": "Mappers"}
 LOCALAPPDATA = Path(os.environ.get("LOCALAPPDATA", ""))
 RESPALDOS = LOCALAPPDATA / "MaschineMK3AsPush" / "respaldos"
 VIRTUALDJ = LOCALAPPDATA / "VirtualDJ"

@@ -13,8 +13,12 @@ Uso:
 import argparse
 import os
 import shutil
+import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import protocolo  # noqa: E402
 
 DEVICE_NAME = "MK3SCREENS"
 PORT_NAME = "MK3 Screens"
@@ -59,6 +63,20 @@ GLOBAL_FIELDS = (
 )
 
 
+# Entradas: el modo que decide el script de Ableton (vdj_sync.py -> vdj_puerto.py), dos Control Change en el canal 1.
+# Cada una corrige $vdj, $padlock y $pads solo si no coinciden: llegan cada segundo y no tienen que repetir lo que
+# hace SAMPLING / MIXER en el mapeo de la Maschine (apagar el modo del encoder, la página de pads)
+_PADS = "(var '$vdj' ? set '$pads' 1 : (var '$padlock' ? set '$pads' 1 : set '$pads' 0))"
+INPUTS = (
+    (protocolo.VDJ_SYNC_CC_LOCK, "ABLETON_LOCK",
+     "(param_bigger 0.5 ? set '$padlock' 1 : set '$padlock' 0) & " + _PADS),
+    (protocolo.VDJ_SYNC_CC_DJ, "ABLETON_DJ",
+     "(param_bigger 0.5 ? (var '$vdj' ? nothing : (set '$vdj' 1 & set '$encmode' 0 & set '$select' 0 & "
+     "(var '$padlock' ? nothing : set '$padpage' 1))) : (var '$vdj' ? (set '$vdj' 0 & set '$select' 0 & "
+     "set '$encmode' 0) : nothing)) & " + _PADS),
+)
+
+
 def element_name(deck, name):
     return name if deck == GLOBAL_DECK else f"D{deck}_{name}"
 
@@ -82,6 +100,8 @@ def device_xml():
         f'<device name="{DEVICE_NAME}" author="Santiago Jorda" description="Pantallas Maschine MK3 (datos)" '
         f'version="800" type="MIDI" decks="2" drivername="{PORT_NAME}" drivernameout="{PORT_NAME}">',
     ]
+    for cc, name, _ in INPUTS:
+        lines.append(f'  <slider cc="0x{cc:02X}" channel="0" ghost="false" name="{name}" />')
     for deck, code, name, size, _, encoding in all_fields():
         field = (deck << 4) | code
         sysex = f"F07D{field:02X}" + "20" * size + "F7"
@@ -97,8 +117,10 @@ def device_xml():
 def mapper_xml():
     lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
-        f'<mapper device="{DEVICE_NAME}" author="Santiago Jorda" version="800" date="2026-10-08">',
+        f'<mapper device="{DEVICE_NAME}" author="Santiago Jorda" version="800" date="2026-10-29">',
     ]
+    for _, name, action in INPUTS:
+        lines.append(f'  <map value="{name}" action="{action.replace("&", "&amp;")}" />')
     for deck, _, name, _, action, _ in all_fields():
         escaped = action.replace("&", "&amp;")
         lines.append(f'  <map value="{element_name(deck, name)}" action="{escaped}" />')
@@ -121,8 +143,9 @@ def main():
     parser.add_argument("--instalar", action="store_true", help="copiar a la carpeta de VirtualDJ")
     args = parser.parse_args()
 
-    DEVICE_FILE.write_text(device_xml(), encoding="utf-8")
-    MAPPER_FILE.write_text(mapper_xml(), encoding="utf-8")
+    # Siempre LF (como están guardados en git): en Windows write_text pondría CRLF y cambiarían todas las líneas
+    DEVICE_FILE.write_text(device_xml(), encoding="utf-8", newline="\n")
+    MAPPER_FILE.write_text(mapper_xml(), encoding="utf-8", newline="\n")
     validate()
 
     if args.instalar:

@@ -2,7 +2,7 @@
 
 Fuentes:
   - Live (Log.txt): solo las líneas del script de la Maschine y sus errores
-  - el script de Ableton, detalle del marco (CustomMaschineMK3.log)
+  - el script de Ableton, detalle del marco (MaschineMK3AsPush.log)
   - las pantallas y el supervisor (pantallas.log)
   - el puerto de datos de VirtualDJ (vdj_puerto.log)
 
@@ -31,7 +31,7 @@ def live_log():
 def sources():
     live = live_log()
     pairs = [
-        ("live", live), ("script", SCRIPT / "CustomMaschineMK3.log"),
+        ("live", live), ("script", SCRIPT / "MaschineMK3AsPush.log"),
         ("pantallas", LOCALAPPDATA / "MaschineMK3AsPush" / "pantallas.log"),
         ("puerto", LOCALAPPDATA / "MaschineMK3AsPush" / "vdj_puerto.log"),
     ]
@@ -66,7 +66,8 @@ def main():
         for moment, source, text in entries(name, path):
             if moment < since:
                 continue
-            if name == "live" and "CustomMaschineMK3" not in text and "RemoteScriptError" not in text:
+            # El script se llamaba CustomMaschineMK3: los registros viejos usan ese nombre
+            if name == "live" and not any(n in text for n in ("MaschineMK3AsPush", "CustomMaschineMK3", "RemoteScriptError")):
                 continue
             if needle and needle not in text.lower():
                 continue

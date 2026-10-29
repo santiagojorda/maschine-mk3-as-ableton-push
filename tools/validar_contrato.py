@@ -2,7 +2,7 @@
 
 Qué revisa:
   1. VirtualDJ/Devices/MaschineMK3-VDJ.xml: cada control con el mismo número, canal y nombre que el contrato.
-  2. Ableton/CustomMaschineMK3/ControlElements.py: lo mismo con los elementos del script.
+  2. Ableton/MaschineMK3AsPush/ControlElements.py: lo mismo con los elementos del script.
   3. El script de Ableton: que cada (0xB1, n) de sus constantes sea un control del contrato, y que los dueños
      del contrato coincidan con lo que hace MidiRouter.py (el ruteo de verdad) en cada modo.
   4. Pantallas/prototipo/mode.py: los botones que cambian el modo.
@@ -33,10 +33,10 @@ from vdjscript import Analizador, acciones, condicion  # noqa: E402
 
 DEVICE = RAIZ / "VirtualDJ" / "Devices" / "MaschineMK3-VDJ.xml"
 MAPPER = RAIZ / "VirtualDJ" / "Mappers" / "MASCHINEMK3VDJ - Mapeo Personalizado.xml"
-SCRIPT = RAIZ / "Ableton" / "CustomMaschineMK3"
+SCRIPT = RAIZ / "Ableton" / "MaschineMK3AsPush"
 MODE_PY = (RAIZ / "Pantallas" / "prototipo" / "mode.py",)
 # El script de Ableton: la clase principal y los mixins en que está partida
-MODULOS_SCRIPT = ("CustomMaschineMK3.py", "ScreenBridge.py", "SessionNavigation.py", "KnobActions.py")
+MODULOS_SCRIPT = ("MaschineMK3AsPush.py", "ScreenBridge.py", "SessionNavigation.py", "KnobActions.py")
 
 # Variables del mapeo de VirtualDJ en cada modo de la Maschine (las demás quedan "desconocidas": se miran las dos ramas)
 ENTORNO_VDJ = {

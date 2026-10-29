@@ -38,7 +38,7 @@ Documento técnico de diagnóstico, arquitectura, optimización y resiliencia pa
 
 ## 2. Arquitectura y Desacoplamiento
 
-### 2.1. Desarme de la God Class (`CustomMaschineMK3.py` — 1574 líneas)
+### 2.1. Desarme de la God Class (`MaschineMK3AsPush.py` — 1574 líneas)
 Actualmente, la clase central concentra más de 80 métodos con múltiples responsabilidades cruzadas:
 * Parsing de bytes MIDI en crudo.
 * Lógica de transporte y disparo de clips.
@@ -48,7 +48,7 @@ Actualmente, la clase central concentra más de 80 métodos con múltiples respo
 
 ### 2.2. Nueva Estructura Modular Sugerida
 ```text
-Ableton/CustomMaschineMK3/
+Ableton/MaschineMK3AsPush/
 ├── core/
 │   ├── constants.py          # Enums de MIDI, canales, CCs y temporizaciones
 │   └── logger.py
@@ -61,7 +61,7 @@ Ableton/CustomMaschineMK3/
 │   ├── session_nav.py        # Navegación 4D encoder
 │   ├── session_volume.py     # Gestión de perillas y faders de sesión
 │   └── screen_bridge.py      # Socket UDP, temporizador y serialización
-└── CustomMaschineMK3.py      # Orquestador liviano (< 150 líneas)
+└── MaschineMK3AsPush.py      # Orquestador liviano (< 150 líneas)
 ```
 
 ### 2.3. Eliminación de Flags de Estado Acopladas
@@ -135,7 +135,7 @@ Estructurar combinaciones (`MUTE + knob`, `SOLO + knob`, `RESTART + knob`, `ERAS
 ## 5. Reducción de Mensajes y Procesamiento
 
 ### 5.1. Eliminación del Bloqueo Síncrono `sleep(0.0005)`
-* **Diagnóstico:** En `CustomMaschineMK3._do_send_midi`, cada mensaje enviado aplica `sleep(0.0005)` en el hilo principal de Python de Live.
+* **Diagnóstico:** En `MaschineMK3AsPush._do_send_midi`, cada mensaje enviado aplica `sleep(0.0005)` en el hilo principal de Python de Live.
 * **Solución:** Utilizar la infraestructura de cola de mensajes nativa del framework de Ableton v3 (`schedule_message` / buffer de chunks), garantizando cero micro-bloqueos en el procesamiento de eventos de Live.
 
 ### 5.2. Memorización de Mediciones de Texto (Caching Pillow)

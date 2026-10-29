@@ -1,6 +1,6 @@
 """Dibuja el modo Ableton con gráficos: faders en el mixer y knobs en los dispositivos.
 
-Usa el estado JSON que manda el script CustomMaschineMK3 (ver ableton_text.py).
+Usa el estado JSON que manda el script MaschineMK3AsPush (ver ableton_text.py).
 Cada pantalla tiene 4 columnas de 120 px, una por perilla (izquierda: perillas
 1-4, derecha: 5-8), así cada control queda arriba de su perilla.
 

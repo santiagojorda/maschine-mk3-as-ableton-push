@@ -40,7 +40,7 @@ class Control:
     numero: int | None
     canal: int
     vdj: str | None  # nombre en VirtualDJ/Devices/MaschineMK3-VDJ.xml (None: VirtualDJ no lo define)
-    ableton: str | None  # elemento de Ableton/CustomMaschineMK3/ControlElements.py; "pads[3]" = cuarto de la matriz
+    ableton: str | None  # elemento de Ableton/MaschineMK3AsPush/ControlElements.py; "pads[3]" = cuarto de la matriz
     ableton_modo: str = "ableton"
     lock: str = "ableton"
     dj: str = "vdj"

@@ -1,7 +1,7 @@
 """Protocolo entre los programas del proyecto: puertos UDP (todos en 127.0.0.1) y mensajes.
 
 La fuente es contrato/protocolo.py. Hay dos copias idénticas porque cada programa solo importa de su carpeta:
-Ableton/CustomMaschineMK3/Protocolo.py (el script de Live) y Pantallas/prototipo/protocolo.py.
+Ableton/MaschineMK3AsPush/Protocolo.py (el script de Live) y Pantallas/prototipo/protocolo.py.
 No se editan a mano: se edita la fuente y se corre  python tools/validar_contrato.py --arreglar
 Qué lleva cada mensaje: contrato/PROTOCOLO.md
 """

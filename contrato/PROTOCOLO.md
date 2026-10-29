@@ -1,6 +1,6 @@
 # Protocolo entre programas
 
-Todo viaja por UDP en `127.0.0.1`. Los números y nombres salen de [`protocolo.py`](protocolo.py) (versión actual: **1**), que tiene dos copias idénticas: `Ableton/CustomMaschineMK3/Protocolo.py` y `Pantallas/prototipo/protocolo.py`. `python tools/validar_contrato.py` avisa si las copias se separan o si algún archivo escribe un puerto a mano.
+Todo viaja por UDP en `127.0.0.1`. Los números y nombres salen de [`protocolo.py`](protocolo.py) (versión actual: **1**), que tiene dos copias idénticas: `Ableton/MaschineMK3AsPush/Protocolo.py` y `Pantallas/prototipo/protocolo.py`. `python tools/validar_contrato.py` avisa si las copias se separan o si algún archivo escribe un puerto a mano.
 
 ```
  Script de Ableton ──── 9017 SCREENS_PORT ────►  Pantallas (ableton_text)

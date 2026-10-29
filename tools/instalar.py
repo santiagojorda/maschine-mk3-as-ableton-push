@@ -30,7 +30,8 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 NOMBRE_INSTALADO = "Maschine_as_Push"
-ORIGEN_SCRIPT = "Ableton/CustomMaschineMK3"
+# El script se llamaba CustomMaschineMK3: las ramas viejas (--ref) lo tienen en esa carpeta
+ORIGENES_SCRIPT = ("Ableton/MaschineMK3AsPush", "Ableton/CustomMaschineMK3")
 # El mapeo de la Maschine y el del puerto "MK3 Screens" (datos para las pantallas y el modo que decide el script)
 ORIGEN_VDJ = {"VirtualDJ/Devices/MaschineMK3-VDJ.xml": "Devices",
               "VirtualDJ/Mappers/MASCHINEMK3VDJ - Mapeo Personalizado.xml": "Mappers",
@@ -55,21 +56,34 @@ def _git(*args):
 def archivos(ref):
     """[(ruta en el repo, contenido)] de lo que se instala, desde la carpeta del repo o desde una rama de git."""
     if ref is None:
-        rutas = [p.relative_to(RAIZ).as_posix() for p in sorted((RAIZ / ORIGEN_SCRIPT).glob("*.py"))]
+        rutas = [p.relative_to(RAIZ).as_posix() for p in sorted((RAIZ / ORIGENES_SCRIPT[0]).glob("*.py"))]
         return [(ruta, (RAIZ / ruta).read_bytes()) for ruta in rutas + list(ORIGEN_VDJ)]
-    nombres = _git("ls-tree", "--name-only", f"{ref}:{ORIGEN_SCRIPT}").decode("utf-8").split()
-    rutas = [f"{ORIGEN_SCRIPT}/{nombre}" for nombre in nombres if nombre.endswith(".py")]
-    return [(ruta, _git("show", f"{ref}:{ruta}")) for ruta in rutas + list(ORIGEN_VDJ)]
+    for origen in ORIGENES_SCRIPT:
+        try:
+            nombres = _git("ls-tree", "--name-only", f"{ref}:{origen}").decode("utf-8").split()
+            break
+        except subprocess.CalledProcessError:
+            continue
+    else:
+        raise SystemExit(f"La rama {ref} no tiene el script en {' ni '.join(ORIGENES_SCRIPT)}")
+    contenidos = [(f"{origen}/{nombre}", _git("show", f"{ref}:{origen}/{nombre}"))
+                  for nombre in nombres if nombre.endswith(".py")]
+    for ruta in ORIGEN_VDJ:
+        try:
+            contenidos.append((ruta, _git("show", f"{ref}:{ruta}")))
+        except subprocess.CalledProcessError:
+            pass  # una rama vieja puede no tener los XML del puerto "MK3 Screens": esos quedan como están
+    return contenidos
 
 
 def plan(contenidos):
     """[(origen en el repo, destino, contenido)]"""
     pasos = []
     for destino in destinos_ableton():
-        pasos += [(ruta, destino / Path(ruta).name, datos) for ruta, datos in contenidos if ruta.startswith(ORIGEN_SCRIPT)]
+        pasos += [(ruta, destino / Path(ruta).name, datos) for ruta, datos in contenidos if ruta.startswith("Ableton/")]
     for ruta, carpeta in ORIGEN_VDJ.items():
-        datos = dict(contenidos)[ruta]
-        pasos.append((ruta, VIRTUALDJ / carpeta / Path(ruta).name, datos))
+        if ruta in dict(contenidos):
+            pasos.append((ruta, VIRTUALDJ / carpeta / Path(ruta).name, dict(contenidos)[ruta]))
     return pasos
 
 
@@ -134,15 +148,21 @@ def main():
     print(f"Instalo desde {origen}: {len(cambian)} de {len(pasos)} archivos cambian")
     for ruta, destino, _ in cambian:
         print(f"  {ruta}  ->  {destino}")
+    # Los .py instalados que el origen ya no tiene (por ejemplo CustomMaschineMK3.py, el nombre viejo): se respaldan
+    # y se borran, así Live no carga código que ya no existe en el repo
     sobrantes = [archivo for destino in destinos_ableton() for archivo in destino.glob("*.py")
                  if archivo.name not in {Path(ruta).name for ruta, _ in archivos(args.ref) if ruta.endswith(".py")}]
     for archivo in sobrantes:
-        print(f"  (queda instalado y no está en el origen: {archivo})")
-    if args.simular or not cambian:
+        print(f"  se borra (no está en el origen): {archivo}")
+    if args.simular or not (cambian or sobrantes):
         print("Nada copiado." if args.simular else "Ya estaba instalado.")
         return 0
 
-    print(f"Respaldo: {respaldar(cambian)}")
+    print(f"Respaldo: {respaldar(cambian + [(None, archivo, None) for archivo in sobrantes])}")
+    for archivo in sobrantes:
+        archivo.unlink()
+        for compilado in (archivo.parent / "__pycache__").glob(archivo.stem + ".*.pyc"):
+            compilado.unlink()
     for _, destino, datos in cambian:
         destino.parent.mkdir(parents=True, exist_ok=True)
         destino.write_bytes(datos)

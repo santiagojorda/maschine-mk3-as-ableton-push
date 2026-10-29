@@ -1,6 +1,6 @@
 """Recibe el texto de pantalla que manda el script de Ableton y lo dibuja.
 
-El script CustomMaschineMK3 (Config.SCREEN_BRIDGE_PORT) manda por UDP a
+El script MaschineMK3AsPush (Config.SCREEN_BRIDGE_PORT) manda por UDP a
 127.0.0.1 una copia de cada línea MCU que le escribe a la Maschine:
 F0 00 00 66 17 12 <posición> <caracteres...> F7, con posición = línea x 28.
 

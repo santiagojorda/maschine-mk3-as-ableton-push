@@ -14,7 +14,7 @@ El servidor de pantallas intercepta el flujo de trabajo sin interferir con las e
    - Los pads, botones y perillas permanecen en la Interfaz 4 (HID) y son leídos normalmente por el sistema operativo y la DAW.
 
 2. **Recepción de Datos desde Ableton Live:**
-   - El script MIDI `CustomMaschineMK3` dentro de Ableton Live transmite el estado de la sesión vía **UDP (puerto 9017)** hacia `127.0.0.1`.
+   - El script MIDI `MaschineMK3AsPush` dentro de Ableton Live transmite el estado de la sesión vía **UDP (puerto 9017)** hacia `127.0.0.1`.
    - Se transmiten eventos estructurados JSON:
      - Nombres y colores de pistas.
      - Vúmetros estéreo en tiempo real.

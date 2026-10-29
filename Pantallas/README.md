@@ -32,7 +32,7 @@ Toda la documentación técnica y manuales del proyecto se encuentran centraliza
 ## ⚡ Cómo Funciona
 
 1. **Comunicación con Ableton Live:**
-   - El script MIDI de Ableton Live (`CustomMaschineMK3`) transmite su estado en tiempo real vía socket **UDP local (puerto 9017)**.
+   - El script MIDI de Ableton Live (`MaschineMK3AsPush`) transmite su estado en tiempo real vía socket **UDP local (puerto 9017)**.
    - Envía nombres de pistas, colores, clips activos, faders, vúmetros dinámicos, parámetros de plugins, árbol del browser y modos de encoder.
 
 2. **Renderizado en Pantallas:**

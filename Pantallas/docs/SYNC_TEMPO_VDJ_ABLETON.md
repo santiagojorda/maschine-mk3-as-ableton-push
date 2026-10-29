@@ -45,7 +45,7 @@ VirtualDJ y el ecosistema de pantallas de la Maschine ya cuentan con canales de 
                │ (Ableton -> Screens)      │ (VDJ BPM -> Ableton)
                ▼                           │
 ┌────────────────────────────────────────────────────────┐
-│         Ableton Live 12 (CustomMaschineMK3)            │
+│         Ableton Live 12 (MaschineMK3AsPush)            │
 │  - Modo encoder: "tempo"                               │
 │  - Botón: EncoderPush (botón 8)                        │
 │  - Acción: self.song.tempo = vdj_bpm                   │
@@ -76,9 +76,9 @@ Para determinar cuál es el tempo de VirtualDJ a mostrar y sincronizar:
 Existen dos alternativas sencillas y de muy baja latencia:
 - **Alternativa A (Socket UDP de Retorno - Recomendada):**
   `dj_screens.py` envía un paquete UDP ligero a `127.0.0.1:9021` cada vez que el BPM del deck activo cambia o cuando Ableton reporta estar en modo `tempo`.
-  En `CustomMaschineMK3`, un socket no bloqueante (`socket.SOCK_DGRAM`, `setblocking(False)`) lee el paquete dentro del ciclo `_screen_bridge_tick` (~33 ms).
+  En `MaschineMK3AsPush`, un socket no bloqueante (`socket.SOCK_DGRAM`, `setblocking(False)`) lee el paquete dentro del ciclo `_screen_bridge_tick` (~33 ms).
 - **Alternativa B (Archivo de Estado / Shared Memory):**
-  `dj_screens.py` escribe `vdj_tempo.json` en `DATA_DIR` con el BPM activo. `CustomMaschineMK3` lo lee cuando se presiona el botón de sincronización. (Ventaja: cero sockets nuevos; Desventaja: I/O de disco si no se usa RAM/mmap).
+  `dj_screens.py` escribe `vdj_tempo.json` en `DATA_DIR` con el BPM activo. `MaschineMK3AsPush` lo lee cuando se presiona el botón de sincronización. (Ventaja: cero sockets nuevos; Desventaja: I/O de disco si no se usa RAM/mmap).
 
 ---
 
@@ -126,7 +126,7 @@ Actualmente esa pantalla solo muestra:
 ## 4. Asignación de Hardware (Botones Físicos)
 
 ### 4.1. Botón Principal: `EncoderPush` (Presionar el Encoder 4D)
-- **Por qué:** En la configuración actual de [`Mappings.py:123-126`](file:///c:/Users/jorda/Documentos/PROYECTOS/ABLETON/maschine-mk3-as-ableton-push/Ableton/CustomMaschineMK3/Mappings.py#L123-L126), en modo `tempo`:
+- **Por qué:** En la configuración actual de [`Mappings.py:123-126`](file:///c:/Users/jorda/Documentos/PROYECTOS/ABLETON/maschine-mk3-as-ableton-push/Ableton/MaschineMK3AsPush/Mappings.py#L123-L126), en modo `tempo`:
   ```python
   tempo = dict(
       component = "Transport",
@@ -150,7 +150,7 @@ Actualmente esa pantalla solo muestra:
 
 ## 5. Lógica de Ejecución en Código (Especificación)
 
-### En `CustomMaschineMK3.py`:
+### En `MaschineMK3AsPush.py`:
 ```python
 def _sync_tempo_with_virtualdj(self):
     """Iguala el tempo de Ableton al BPM activo de VirtualDJ sin Ableton Link."""
@@ -183,6 +183,6 @@ if self.component_map["Encoder_Modes"].selected_mode == "tempo":
 ## 7. Próximos Pasos para la Implementación
 
 1. **Paso 1:** Agregar en `encoder_view.py` la recepción de `vdj_data` para renderizar el BPM de VDJ junto al de Ableton cuando el modo sea `TEMPO`.
-2. **Paso 2:** Habilitar un canal UDP no bloqueante en `CustomMaschineMK3` para recibir `vdj_bpm` desde el driver de pantallas.
+2. **Paso 2:** Habilitar un canal UDP no bloqueante en `MaschineMK3AsPush` para recibir `vdj_bpm` desde el driver de pantallas.
 3. **Paso 3:** Mapear `encoderpush` en el modo `tempo` de `Mappings.py` para invocar `_sync_tempo_with_virtualdj()`.
 4. **Paso 4:** Probar la respuesta en vivo con temas a distintos BPM en VirtualDJ.

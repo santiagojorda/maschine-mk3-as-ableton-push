@@ -7,8 +7,8 @@ Esta guía detalla los pasos para configurar el driver de pantallas de **Native 
 ## 📋 Requisitos Previos
 
 1. **Native Instruments Maschine MK3** conectada por USB 2.0.
-2. **Ableton Live 12** con el script `CustomMaschineMK3` instalado en:  
-   `%USERPROFILE%\Documents\Ableton\User Library\Remote Scripts\CustomMaschineMK3`
+2. **Ableton Live 12** con el script `MaschineMK3AsPush` instalado en:  
+   `%USERPROFILE%\Documents\Ableton\User Library\Remote Scripts\MaschineMK3AsPush`
 3. **Zadig** (utilidad gratuita para controladores USB): [Descargar de zadig.akeo.ie](https://zadig.akeo.ie/).
 4. Windows 10 u 11 (64 bits).
 
@@ -88,6 +88,6 @@ Si alguna vez se asignó WinUSB a una interfaz incorrecta por error:
 | Síntoma | Causa Probable | Solución |
 |---|---|---|
 | Las pantallas quedan en negro | El servicio no encuentra la interfaz USB 5 o Zadig no se aplicó | Verificá con Zadig que la Interface 5 tenga el driver WinUSB y reconectá el cable USB. |
-| Ableton no actualiza los gráficos | El puerto UDP 9017 está bloqueado o el Remote Script no está seleccionado | En Preferencias de Ableton → Link, Tempo & MIDI, asegurate de que `CustomMaschineMK3` esté seleccionado como Superficie de Control. |
+| Ableton no actualiza los gráficos | El puerto UDP 9017 está bloqueado o el Remote Script no está seleccionado | En Preferencias de Ableton → Link, Tempo & MIDI, asegurate de que `MaschineMK3AsPush` esté seleccionado como Superficie de Control. |
 | El registro indica "Ya hay un supervisor corriendo" | Existe un proceso previo activo | Ejecutá `detener.bat` o cerrá el proceso `MaschineMK3AsPush.exe` desde el Administrador de Tareas. |
 | Registro de eventos y errores | Diagnóstico detallado | Revisá el archivo `%LOCALAPPDATA%\MaschineMK3AsPush\pantallas.log`. |

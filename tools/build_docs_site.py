@@ -21,7 +21,7 @@ html = html.replace(
     '<h1>Maschine MK3 as Ableton Push</h1>'
 )
 html = html.replace(
-    'Guía de uso del Maschine MK3 con Ableton Live 12 y VirtualDJ (script CustomMaschineMK3 modificado).',
+    'Guía de uso del Maschine MK3 con Ableton Live 12 y VirtualDJ (script MaschineMK3AsPush modificado).',
     'Guía interactiva completa de todas las operaciones para Maschine MK3 como Ableton Push en Live 12.'
 )
 

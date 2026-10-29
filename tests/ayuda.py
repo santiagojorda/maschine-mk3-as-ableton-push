@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
-SCRIPT = RAIZ / "Ableton" / "CustomMaschineMK3"
+SCRIPT = RAIZ / "Ableton" / "MaschineMK3AsPush"
 for ruta in (RAIZ, RAIZ / "tools"):
     if str(ruta) not in sys.path:
         sys.path.insert(0, str(ruta))

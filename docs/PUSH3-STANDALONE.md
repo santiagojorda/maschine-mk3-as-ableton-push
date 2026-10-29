@@ -7,7 +7,7 @@ probó en un Push 3.** Cada afirmación dice si está confirmada por esa documen
 ## 1. La idea
 
 Hoy la Maschine MK3 funciona conectada a una PC con Windows: el programa de Native Instruments convierte sus pads
-y botones en MIDI, el script de Ableton (`CustomMaschineMK3`) controla Live, y el programa de las pantallas
+y botones en MIDI, el script de Ableton (`MaschineMK3AsPush`) controla Live, y el programa de las pantallas
 (`Pantallas/`) dibuja en las dos pantallas.
 
 La idea es sacar la PC: el **Push 3 standalone** corre Live por su cuenta y la Maschine se enchufa al puerto USB-A
@@ -16,7 +16,7 @@ del Push. El Push queda como "caja" que ejecuta Live y hace el audio, y **solo l
 ```
  Maschine MK3 ──USB──► Push 3 standalone (Linux)
                          │
-                         ├─ driver de la Maschine (Go) ──► puerto MIDI virtual (ALSA) ──► Live ── script CustomMaschineMK3
+                         ├─ driver de la Maschine (Go) ──► puerto MIDI virtual (ALSA) ──► Live ── script MaschineMK3AsPush
                          └─ pantallas de la Maschine ◄──── driver (Go)
 
  Los controles del propio Push: ignorados (filtro de MIDI de push-hack)
@@ -47,7 +47,7 @@ Confirmado en la documentación de push-hack (`docs/architecture.md`, `docs/push
 | 1 | **Acceso a la Maschine** | Leer pads y botones por `hidraw` (interfaz 4) y escribir luces. Las pantallas van por la interfaz 5 (endpoint bulk 4), y como en el Push no hay `libusb`, hay que hablar con `/dev/bus/usb` directamente desde Go. En `core/` no hay código de eso | L |
 | 2 | **De HID a MIDI** | Lo que hoy hace el programa de NI: convertir pads, botones y perillas a las notas y CC que espera el script. La tabla sale de `Configuration.ncc` (es un XML) | M |
 | 3 | **Puerto MIDI virtual** | Crear con `core/alsaseq` un puerto que Live vea como entrada y salida (para las luces). Hay que esperar a que pasen ~30 s del arranque antes de abrir ALSA (ver la sección 6) | S |
-| 4 | **El script en el Push** | Copiar `CustomMaschineMK3` a la carpeta de Remote Scripts del Push y activarlo como superficie de control. El catálogo habla de "un paso manual único en las Preferencias de Live" | M, con una incógnita |
+| 4 | **El script en el Push** | Copiar `MaschineMK3AsPush` a la carpeta de Remote Scripts del Push y activarlo como superficie de control. El catálogo habla de "un paso manual único en las Preferencias de Live" | M, con una incógnita |
 | 5 | **Pantallas** | Hoy se dibujan con Python (Pillow). En el Push hay que dibujar en Go: mixer, session, browser, reposo. Es traducir la parte de dibujo | L |
 | 6 | **Empaquetar** | `hack.json`, servicio en el arranque y release para el catálogo | S |
 

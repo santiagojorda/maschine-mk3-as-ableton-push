@@ -9,7 +9,7 @@
 
 Reemplazar los servicios residentes de Native Instruments en segundo plano por un driver propio de alto rendimiento, optimizado para la integración con **[maschine-mk3-as-ableton-push](https://github.com/santiagojorda/maschine-mk3-as-ableton-push)**:
 
-- **Modo Ableton Live 12:** Todo funciona de forma nativa e interactiva con el Remote Script `CustomMaschineMK3`.
+- **Modo Ableton Live 12:** Todo funciona de forma nativa e interactiva con el Remote Script `MaschineMK3AsPush`.
 - **Renderizado de pantallas:** Telemetría en tiempo real recibida vía socket UDP local (puerto 9017) y dibujada a 20+ FPS en las dos pantallas LCD a color (480×272 c/u).
 - **Control de hardware:** Lectura HID directa para pads, perillas, botones y encoders; actualización de LEDs por reportes HID.
 - **Portabilidad futura:** Preparado para correr en Windows 11 (Windows MIDI Services) y compilar para Linux (Push 3 standalone / Raspberry Pi).

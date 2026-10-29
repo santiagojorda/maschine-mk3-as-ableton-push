@@ -2,7 +2,7 @@
 <!--
   Maschine MK3 -> VirtualDJ
   Definicion basada en la plantilla "CUSTOM MASCHINE" del Controller Editor
-  (misma asignacion MIDI que el script CustomMaschineMK3 de Ableton).
+  (misma asignacion MIDI que el script MaschineMK3AsPush de Ableton).
   Canales en VirtualDJ empiezan en 0: channel="0" = MIDI 1, channel="1" = MIDI 2.
 -->
 <device name="MASCHINEMK3VDJ" author="Santiago Jorda" description="Maschine MK3 (Custom VDJ)" version="800" type="MIDI" decks="2"

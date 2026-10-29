@@ -15,7 +15,7 @@ Usa **Ableton Live 12 y VirtualDJ abiertos al mismo tiempo** con un Maschine MK3
 
 | Qué | Ruta | Nota |
 |---|---|---|
-| Script de Ableton **en uso** | `C:\ProgramData\Ableton\Live 12 Suite\Resources\MIDI Remote Scripts\CustomMaschineMK3\` | Repo git. Rama activa `feature/vdj-mode` (la que carga Ableton). `main` = original. `feature/knob-labels` vacía. |
+| Script de Ableton **en uso** | `C:\ProgramData\Ableton\Live 12 Suite\Resources\MIDI Remote Scripts\Maschine_as_Push\` (código en `Ableton/MaschineMK3AsPush` del repo) | Repo git. Rama activa `feature/vdj-mode` (la que carga Ableton). `main` = original. `feature/knob-labels` vacía. |
 | Script de Ableton original | `C:\Users\jorda\Downloads\CustomMaschineMK3-main\CustomMaschineMK3-main\CustomMaschineMK3\` | Sin modificar (fuente: github chiakibeats/CustomMaschineMK3). No editar acá. |
 | Definición VirtualDJ (fuente) | `...\CustomMaschineMK3-main\VirtualDJ\Devices\MaschineMK3-VDJ.xml` | Editar acá y copiar a la instalación. |
 | Mapeo VirtualDJ (fuente) | `...\CustomMaschineMK3-main\VirtualDJ\Mappers\MASCHINEMK3VDJ - Mapeo Personalizado.xml` | Ídem. |
@@ -51,7 +51,7 @@ Canales 0-based como en VirtualDJ (`channel="0"` = MIDI 1).
 - Pantalla: protocolo Mackie, 4 líneas × 28. Header `F0 00 00 66 17 12 <pos>`, pos = línea × 28 + columna.
   **Líneas 0 y 2 = pantalla izquierda, 1 y 3 = derecha** (cada línea es de una sola pantalla).
 
-## Ableton (`CustomMaschineMK3.py`, rama `feature/vdj-mode`)
+## Ableton (`MaschineMK3AsPush.py`, antes `CustomMaschineMK3.py`, rama `feature/vdj-mode`)
 
 - `receive_midi` y `receive_midi_chunk` filtran por `_accept_midi`. Live 12 entrega en chunks, así que hay que filtrar los dos.
 - En modo VirtualDJ `build_midi_map` reenvía todo CC/nota/pitch bend de los canales 0-1 al script y lo descarta.

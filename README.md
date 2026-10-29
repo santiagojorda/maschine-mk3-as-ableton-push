@@ -2,31 +2,25 @@
 
 [![Ableton Live 12](https://img.shields.io/badge/Ableton%20Live-12%20Suite-00D2B4.svg)](https://www.ableton.com)
 [![Native Instruments](https://img.shields.io/badge/Hardware-Maschine%20MK3-black.svg)](https://www.native-instruments.com)
-[![Windows 11](https://img.shields.io/badge/OS-Windows%2011%20MIDI%20Services-0078D4.svg)](https://microsoft.com)
-[![Driver Pantallas](https://img.shields.io/badge/Driver%20Pantallas-maschine--mk3--driver-0078D4.svg)](https://github.com/santiagojorda/maschine-mk3-driver)
-[![Release Driver](https://img.shields.io/badge/Release%20Driver-v1.0.0%20(Windows%20x64)-brightgreen.svg)](https://github.com/santiagojorda/maschine-mk3-driver/releases/latest)
-[![Manual Web](https://img.shields.io/badge/Manual-All%20Operations%20(Web)-brightgreen.svg)](https://santiagojorda.github.io/maschine-mk3-as-ableton-push/)
+[![Driver](https://img.shields.io/badge/Driver%20Pantallas-maschine--mk3--driver-0078D4.svg)](https://github.com/santiagojorda/maschine-mk3-driver)
 [![YouTube Playlist](https://img.shields.io/badge/YouTube-Maicol%20Session-FF0000?logo=youtube&logoColor=white)](https://www.youtube.com/watch?v=ImqHw-zkiZQ&list=PLxk2dEOPjuEYO00P264yMStEUhukVkO1y)
 [![Instagram](https://img.shields.io/badge/Instagram-@santiagojorda-E4405F?logo=instagram&logoColor=white)](http://instagram.com/santiagojorda)
 
 ![Maschine MK3 as Ableton Push](docs/images/maschine-mk3-as-push-hero.jpg)
 
-Convertí tu **Maschine MK3** en un potente controlador al estilo **Ableton Push** para **Live 12**:
+Convertí tu **Maschine MK3** en un controlador al estilo **Ableton Push** para **Live 12**:
 - 📺 **Grilla de clips en tiempo real** en las dos pantallas a color.
 - 🎛️ **Navegación tipo Push**: lanzá clips y escenas con el encoder 4D.
 - 🎚️ **Mixer gráfico**: faders verticales, medidores de nivel (vúmetros) dinámicos y paneo estéreo.
 - 🔌 **Control de dispositivos y plugins**: perillas con valores y nombres sincronizados.
 - 📁 **Browser visual**: lista de carpetas a la derecha y grilla de destino a la izquierda.
-- 🛑 **Modo Reposo inteligente**: protege las pantallas y evita toques accidentales.
 
 > 📖 **[Ver Manual Web de Todas las Operaciones](https://santiagojorda.github.io/maschine-mk3-as-ableton-push/)**: guía visual interactiva completa con diagramas de botones y perillas.
 
 ---
 
-### 🎵 El Origen: Maicol Sessions
-Todo esto nació de mis sesiones combinando **Maschine MK3** y **Ableton Live**: una combinación tremenda donde el sampler de Maschine es insuperable por su comodidad y versatilidad con sus perillas dedicadas, pero faltaba ese control fluido estilo Push para manejar todo el set sin tocar el mouse.
-
-Como **ingeniero informático** y como **músico**, para mí era natural ponerme a programar soluciones a medida para mi propio workflow: unir el software con el hardware para transformar la Maschine en la herramienta definitiva a la hora de producir y tocar en vivo.
+### 🎵 El Origen:
+Todo esto nacio de mis sesiones combinando **Maschine MK3** y **Ableton Live**: una combinación tremenda donde el sampler de Maschine es insuperable por su comodidad y versatilidad con sus perillas dedicadas, pero faltaba ese control fluido estilo Push para manejar todo el set sin mirar la pantalla, o estar pensando este pad hace tal cosa, este otro pad hace tal otra. Siendo ingeniero informatico me tome el tiempo de pensar en una solucion para la integracion de mi sampler con Ableton , asi que no aguante mas e hice un protocolo de la pantalla para convertir esto en un Push de verdad: grilla completa de clips, knobs, fxs y faders, todo sin mirar la computadora
 
 [![Maicol Session: Ableton Push + Maschine MK3](https://img.youtube.com/vi/ImqHw-zkiZQ/maxresdefault.jpg)](https://www.youtube.com/watch?v=ImqHw-zkiZQ&list=PLxk2dEOPjuEYO00P264yMStEUhukVkO1y)
 

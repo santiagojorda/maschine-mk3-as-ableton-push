@@ -1,5 +1,13 @@
 """
-Regenera la seccion de pads (acciones + LEDs) y el modo info de SELECT en la definicion y el mapeo de VirtualDJ.
+Arma la definicion y el mapeo de VirtualDJ de la Maschine (Devices/ y Mappers/) desde sus fuentes:
+
+  fuente/dispositivo.xml   la definicion, sin las luces de los pads y de los botones 1-4
+  fuente/mapeo.vdj         las acciones escritas a mano, legibles (ver su cabecera)
+  este archivo             los pads, los botones 1-4, sus luces, el modo info de SELECT y los carteles de stems
+
+Los dos XML de Devices/ y Mappers/ no se editan: se editan las fuentes y se corre  python generar.py
+(python generar.py --revisar dice si los XML estan al dia, sin escribir; los tests lo revisan solos).
+Despues: python tools/instalar.py los copia a %LocalAppData%\\VirtualDJ, y hay que reiniciar VirtualDJ.
 
 Los pads responden con $pads = 1 (modo VirtualDJ, o pads fijados a VirtualDJ con LOCK).
 Las paginas se eligen con KEYBOARD (0, hot cues), PAD MODE (1, transporte), CHORDS (2, stems) y STEP (3, todo apagado).
@@ -7,18 +15,49 @@ Columnas 1-2 = deck 1, columnas 3-4 = deck 2. Las filas se cuentan desde abajo (
 
 Modo info: mientras se mantiene SELECT (en modo VirtualDJ), tocar un pad o un boton de HELP_BUTTONS no hace su accion:
 guarda su codigo en $help y la pantalla izquierda muestra su nombre (linea de abajo vacia).
-
-Para cambiar la distribucion se editan TRANSPORT, STEMS y HELP_BUTTONS y se corre:  python generate_pads.py
-Despues hay que copiar los dos XML a %LocalAppData%\\VirtualDJ y reiniciar VirtualDJ.
 """
 
 import os
 import re
+import sys
 import xml.etree.ElementTree as ET
+from xml.sax.saxutils import escape
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEVICE = os.path.join(HERE, "Devices", "MaschineMK3-VDJ.xml")
 MAPPER = os.path.join(HERE, "Mappers", "MASCHINEMK3VDJ - Mapeo Personalizado.xml")
+SOURCE_DEVICE = os.path.join(HERE, "fuente", "dispositivo.xml")
+SOURCE_MAPPER = os.path.join(HERE, "fuente", "mapeo.vdj")
+sys.path.insert(0, os.path.join(os.path.dirname(HERE), "tools"))
+import vdjscript  # noqa: E402
+
+
+def read_source_mapper():
+    """fuente/mapeo.vdj -> el texto del mapeo sin lo que genera este archivo (las acciones, en una linea)."""
+    lines, name, action = [], None, []
+
+    def close():
+        if name is not None:
+            text = escape(vdjscript.compactar(" ".join(action)), {'"': "&quot;"})
+            lines.append(f'\t<map value="{name}" action="{text}" />')
+
+    for line in open(SOURCE_MAPPER, encoding="utf-8").read().split("\n"):
+        if name is not None and line.startswith("    "):
+            action.append(line)
+            continue
+        close()
+        name, action = None, []
+        if line.startswith("| ") or line == "|":
+            lines.append(line[2:])
+        elif line.startswith("#") or not line.strip():
+            continue
+        else:
+            found = re.fullmatch(r"([A-Z0-9_]+) =(.*)", line)
+            if not found:
+                raise SystemExit(f"fuente/mapeo.vdj: no entiendo la linea {line!r}")
+            name, action = found[1], [found[2]]
+    close()
+    return "\n".join(lines) + "\n"
 
 # MK3 color index = 4 * color + brightness
 RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, VIOLET, WHITE = 1, 2, 5, 7, 9, 11, 13, 31
@@ -254,16 +293,8 @@ def strip_select(action):
     return rest[len(" : ("):-1]
 
 
-def generate():
-    device = open(DEVICE, encoding="utf-8").read()
-    mapper = open(MAPPER, encoding="utf-8").read()
-    device = re.sub(r'  <sysex value="90[0-9A-F]{4}" name="LED_P\d+_[0-9A-F]{2}" />\n', "", device)
-    mapper = re.sub(r'\t<map value="LED_P\d+_[0-9A-F]{2}" action="[^"]*" />\n', "", mapper)
-    mapper = re.sub(r'\t<map value="PAD\d+" action="[^"]*" />\n', "", mapper)
-    device = re.sub(r'  <sysex value="91[0-9A-F]{4}" name="LED_BTN\d_(?:ON|OFF)" />\n', "", device)
-    mapper = re.sub(r'\t<map value="LED_BTN\d_(?:ON|OFF)" action="[^"]*" />\n', "", mapper)
-    mapper = re.sub(r'\t<map value="BTN\d" action="[^"]*" />\n', "", mapper)
-
+def generate(device, mapper):
+    """A la definicion y al mapeo de las fuentes les agrega lo que se genera; devuelve los dos XML y un resumen."""
     help_texts = {}  # code -> text
 
     def help_code(text):
@@ -399,11 +430,8 @@ def generate():
         inner = strip_select(found[1])
         mapper = mapper.replace(found[0], f"\t<map value=\"{field}\" action=\"var '$vdj' ? ({SELECT_PREFIX}{shown}) : ({inner})) : get_text ''\" />")
 
-    open(DEVICE, "w", encoding="utf-8", newline="\n").write(device)
-    open(MAPPER, "w", encoding="utf-8", newline="\n").write(mapper)
-
-    names = {element.get("name") for element in ET.parse(DEVICE).getroot()}
-    root = ET.parse(MAPPER).getroot()
+    names = {element.get("name") for element in ET.fromstring(device.encode("utf-8"))}
+    root = ET.fromstring(mapper.encode("utf-8"))
     values = [element.get("value") for element in root]
     unknown = [v for v in values if v not in names and v != "ONINIT"]
     duplicates = sorted({v for v in values if values.count(v) > 1})
@@ -413,8 +441,27 @@ def generate():
     if unknown or duplicates or unmapped or unbalanced or too_long or "\\" in mapper:
         raise SystemExit(f"Error: desconocidos={unknown} duplicados={duplicates} sin mapear={unmapped} "
                          f"parentesis={unbalanced} textos largos={too_long}")
-    print(f"OK: {len(pad_lines)} pads, {len(device_lines)} mensajes de LED, {len(help_texts)} nombres de info")
+    return device, mapper, f"{len(pad_lines)} pads, {len(device_lines)} mensajes de LED, {len(help_texts)} nombres de info"
+
+
+def build():
+    """Los dos XML como tienen que quedar, armados desde las fuentes (no escribe nada)."""
+    return generate(open(SOURCE_DEVICE, encoding="utf-8").read(), read_source_mapper())
+
+
+def main():
+    device, mapper, summary = build()
+    outputs = ((DEVICE, device), (MAPPER, mapper))
+    if "--revisar" in sys.argv:
+        stale = [path for path, text in outputs if open(path, encoding="utf-8").read() != text]
+        for path in stale:
+            print(f"Desactualizado: {os.path.relpath(path, HERE)} (corré python generar.py)")
+        return 1 if stale else 0
+    for path, text in outputs:
+        open(path, "w", encoding="utf-8", newline="\n").write(text)
+    print(f"OK: {summary}")
+    return 0
 
 
 if __name__ == "__main__":
-    generate()
+    sys.exit(main())

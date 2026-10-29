@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Maschine MK3 -> VirtualDJ
+  Definicion basada en la plantilla "CUSTOM MASCHINE" del Controller Editor
+  (misma asignacion MIDI que el script MaschineMK3AsPush de Ableton).
+  Canales en VirtualDJ empiezan en 0: channel="0" = MIDI 1, channel="1" = MIDI 2.
+-->
+<device name="MASCHINEMK3VDJ" author="Santiago Jorda" description="Maschine MK3 (Custom VDJ)" version="800" type="MIDI" decks="2"
+        drivername="Maschine MK3 Ctrl MIDI" drivernameout="Maschine MK3 Ctrl MIDI">
+
+  <!-- SHIFT: el MK3 lo manda por sysex (pulsado = 01, soltado = 00) -->
+  <sysexin sysexid="F000210916004D5000014D01F7" name="SHIFT_ON" />
+  <sysexin sysexid="F000210916004D5000014D00F7" name="SHIFT_OFF" />
+
+  <!-- Botones CC (MIDI ch 2) -->
+  <button cc="0x22" value="0x7F" off="0x00" channel="1" name="CHANNEL" />
+  <button cc="0x23" value="0x7F" off="0x00" channel="1" name="PLUGIN" />
+  <button cc="0x24" value="0x7F" off="0x00" channel="1" name="ARRANGER" />
+  <button cc="0x25" value="0x7F" off="0x00" channel="1" name="MIXER" />
+  <button cc="0x26" value="0x7F" off="0x00" channel="1" name="BROWSER" />
+  <button cc="0x27" value="0x7F" off="0x00" channel="1" name="SAMPLING" />
+  <button cc="0x28" value="0x7F" off="0x00" channel="1" name="FILE" />
+  <button cc="0x29" value="0x7F" off="0x00" channel="1" name="SETTING" />
+  <button cc="0x2A" value="0x7F" off="0x00" channel="1" name="AUTO" />
+  <button cc="0x2B" value="0x7F" off="0x00" channel="1" name="MACRO" />
+  <button cc="0x2C" value="0x7F" off="0x00" channel="1" name="VOLUME" />
+  <button cc="0x2D" value="0x7F" off="0x00" channel="1" name="SWING" />
+  <button cc="0x2E" value="0x7F" off="0x00" channel="1" name="NOTEREP" />
+  <button cc="0x2F" value="0x7F" off="0x00" channel="1" name="TEMPO" />
+  <button cc="0x30" value="0x7F" off="0x00" channel="1" name="LOCK" />
+  <button cc="0x31" value="0x7F" off="0x00" channel="1" name="PITCH" />
+  <button cc="0x32" value="0x7F" off="0x00" channel="1" name="MOD" />
+  <button cc="0x33" value="0x7F" off="0x00" channel="1" name="PERFORM" />
+  <slider cc="0x34" channel="1" ghost="false" name="NOTES" />
+  <!-- RESTART es slider (como ERASE) para saber cuando se suelta: tambien es modificador de las perillas 1-2 -->
+  <slider cc="0x35" channel="1" ghost="false" name="RESTART" />
+  <slider cc="0x36" channel="1" ghost="false" name="ERASE" />
+  <button cc="0x37" value="0x7F" off="0x00" channel="1" name="TAP" />
+  <button cc="0x38" value="0x7F" off="0x00" channel="1" name="FOLLOW" />
+  <button cc="0x39" value="0x7F" off="0x00" channel="1" name="PLAY" />
+  <button cc="0x3A" value="0x7F" off="0x00" channel="1" name="REC" />
+  <button cc="0x3B" value="0x7F" off="0x00" channel="1" name="STOP" />
+  <button cc="0x50" value="0x7F" off="0x00" channel="1" name="FIXEDVEL" />
+  <button cc="0x51" value="0x7F" off="0x00" channel="1" name="PADMODE" />
+  <button cc="0x52" value="0x7F" off="0x00" channel="1" name="KEYBOARD" />
+  <button cc="0x53" value="0x7F" off="0x00" channel="1" name="CHORDS" />
+  <button cc="0x54" value="0x7F" off="0x00" channel="1" name="STEP" />
+  <button cc="0x55" value="0x7F" off="0x00" channel="1" name="SCENE" />
+  <button cc="0x56" value="0x7F" off="0x00" channel="1" name="PATTERN" />
+  <button cc="0x57" value="0x7F" off="0x00" channel="1" name="EVENTS" />
+  <button cc="0x58" value="0x7F" off="0x00" channel="1" name="VARIATION" />
+  <button cc="0x59" value="0x7F" off="0x00" channel="1" name="DUPLICATE" />
+  <slider cc="0x5A" channel="1" ghost="false" name="SELECT" />
+  <button cc="0x5B" value="0x7F" off="0x00" channel="1" name="SOLO" />
+  <button cc="0x5C" value="0x7F" off="0x00" channel="1" name="MUTE" />
+  <button cc="0x6E" value="0x7F" off="0x00" channel="1" name="LEFT" />
+  <button cc="0x6F" value="0x7F" off="0x00" channel="1" name="RIGHT" />
+  <button cc="0x08" value="0x7F" off="0x00" channel="1" name="ENCODER_PUSH" />
+  <slider cc="0x09" channel="1" ghost="false" name="ENCODER_TOUCH" />
+  <button cc="0x1E" value="0x7F" off="0x00" channel="1" name="ENCODER_UP" />
+  <button cc="0x1F" value="0x7F" off="0x00" channel="1" name="ENCODER_RIGHT" />
+  <button cc="0x20" value="0x7F" off="0x00" channel="1" name="ENCODER_DOWN" />
+  <button cc="0x21" value="0x7F" off="0x00" channel="1" name="ENCODER_LEFT" />
+
+  <!-- Botones de grupo A-H (CC 100-107, MIDI ch 2) y sus LEDs (MIDI ch 1) -->
+  <button cc="0x64" value="0x7F" off="0x00" channel="1" name="GROUP_A" />
+  <button cc="0x65" value="0x7F" off="0x00" channel="1" name="GROUP_B" />
+  <button cc="0x66" value="0x7F" off="0x00" channel="1" name="GROUP_C" />
+  <button cc="0x67" value="0x7F" off="0x00" channel="1" name="GROUP_D" />
+  <button cc="0x68" value="0x7F" off="0x00" channel="1" name="GROUP_E" />
+  <button cc="0x69" value="0x7F" off="0x00" channel="1" name="GROUP_F" />
+  <button cc="0x6A" value="0x7F" off="0x00" channel="1" name="GROUP_G" />
+  <button cc="0x6B" value="0x7F" off="0x00" channel="1" name="GROUP_H" />
+
+  <!-- 8 botones sobre la pantalla (notas 0-7, MIDI ch 2) -->
+  <!-- 1-4 son slider (como ERASE): VirtualDJ corre la accion de un boton tambien al soltarlo y deshacia el toggle de stems -->
+  <slider note="0x00" channel="1" ghost="no" name="BTN1" />
+  <slider note="0x01" channel="1" ghost="no" name="BTN2" />
+  <slider note="0x02" channel="1" ghost="no" name="BTN3" />
+  <slider note="0x03" channel="1" ghost="no" name="BTN4" />
+  <button note="0x04" channel="1" name="BTN5" />
+  <button note="0x05" channel="1" name="BTN6" />
+  <button note="0x06" channel="1" name="BTN7" />
+  <button note="0x07" channel="1" name="BTN8" />
+
+  <!-- Toque de las perillas (CC 10-17, MIDI ch 2) -->
+  <slider cc="0x0A" channel="1" ghost="false" name="KNOB1_TOUCH" />
+  <slider cc="0x0B" channel="1" ghost="false" name="KNOB2_TOUCH" />
+  <slider cc="0x0C" channel="1" ghost="false" name="KNOB3_TOUCH" />
+  <slider cc="0x0D" channel="1" ghost="false" name="KNOB4_TOUCH" />
+  <slider cc="0x0E" channel="1" ghost="false" name="KNOB5_TOUCH" />
+  <slider cc="0x0F" channel="1" ghost="false" name="KNOB6_TOUCH" />
+  <slider cc="0x10" channel="1" ghost="false" name="KNOB7_TOUCH" />
+  <slider cc="0x11" channel="1" ghost="false" name="KNOB8_TOUCH" />
+
+  <!-- Perillas 1-8: V-Pots Mackie (CC 16-23, MIDI ch 1), relativas -->
+  <encoder cc="0x10" channel="0" zero="0x00" name="KNOB1" />
+  <encoder cc="0x11" channel="0" zero="0x00" name="KNOB2" />
+  <encoder cc="0x12" channel="0" zero="0x00" name="KNOB3" />
+  <encoder cc="0x13" channel="0" zero="0x00" name="KNOB4" />
+  <encoder cc="0x14" channel="0" zero="0x00" name="KNOB5" />
+  <encoder cc="0x15" channel="0" zero="0x00" name="KNOB6" />
+  <encoder cc="0x16" channel="0" zero="0x00" name="KNOB7" />
+  <encoder cc="0x17" channel="0" zero="0x00" name="KNOB8" />
+
+  <!-- Encoder grande (CC 7, MIDI ch 2, complemento a dos) -->
+  <encoder cc="0x07" channel="1" zero="0x00" name="BROWSE" />
+
+  <!-- Touch strip (pitch bend, MIDI ch 1) -->
+  <slider pitch="true" channel="0" name="TOUCHSTRIP" ghost="false" />
+  <slider pitch="true" channel="1" name="TOUCHSTRIP_RELEASE" ghost="false" />
+
+  <!-- Pads 1-16 (notas 60-75, MIDI ch 1). PAD1 = abajo a la izquierda, PAD16 = arriba a la derecha -->
+  <button note="0x3C" channel="0" name="PAD1" />
+  <button note="0x3D" channel="0" name="PAD2" />
+  <button note="0x3E" channel="0" name="PAD3" />
+  <button note="0x3F" channel="0" name="PAD4" />
+  <button note="0x40" channel="0" name="PAD5" />
+  <button note="0x41" channel="0" name="PAD6" />
+  <button note="0x42" channel="0" name="PAD7" />
+  <button note="0x43" channel="0" name="PAD8" />
+  <button note="0x44" channel="0" name="PAD9" />
+  <button note="0x45" channel="0" name="PAD10" />
+  <button note="0x46" channel="0" name="PAD11" />
+  <button note="0x47" channel="0" name="PAD12" />
+  <button note="0x48" channel="0" name="PAD13" />
+  <button note="0x49" channel="0" name="PAD14" />
+  <button note="0x4A" channel="0" name="PAD15" />
+  <button note="0x4B" channel="0" name="PAD16" />
+
+
+
+  <!-- LEDs de los pads: un mensaje por cada color que puede tomar el pad (nota 60-75, velocidad = color) -->
+  <sysex value="B1527F" name="LEDON_KEYBOARD" />
+  <sysex value="B15200" name="LEDOFF_KEYBOARD" />
+  <sysex value="B1517F" name="LEDON_PADMODE" />
+  <sysex value="B15100" name="LEDOFF_PADMODE" />
+  <sysex value="B1537F" name="LEDON_CHORDS" />
+  <sysex value="B15300" name="LEDOFF_CHORDS" />
+  <sysex value="B1547F" name="LEDON_STEP" />
+  <sysex value="B15400" name="LEDOFF_STEP" />
+  <sysex value="B1307F" name="LEDON_LOCK" />
+  <sysex value="B13000" name="LEDOFF_LOCK" />
+  <sysex value="B1387F" name="LEDON_FOLLOW" />
+  <sysex value="B13800" name="LEDOFF_FOLLOW" />
+  <sysex value="B12C7F" name="LEDON_VOLUME" />
+  <sysex value="B12C00" name="LEDOFF_VOLUME" />
+  <sysex value="B12F7F" name="LEDON_TEMPO" />
+  <sysex value="B12F00" name="LEDOFF_TEMPO" />
+  <sysex value="B12D7F" name="LEDON_SWING" />
+  <sysex value="B12D00" name="LEDOFF_SWING" />
+
+  <!-- LEDs como MIDI crudo (los <led> no encendian): un mensaje para prender y otro para apagar.
+       Pads: nota 60-75 canal 1; grupos A-H: CC 100-107 canal 2 (como el script de Ableton); la velocidad / valor es el color del MK3 -->
+  <sysex value="B1642F" name="LEDON_GROUP_A" />
+  <sysex value="B16400" name="LEDOFF_GROUP_A" />
+  <sysex value="B1650B" name="LEDON_GROUP_B" />
+  <sysex value="B16500" name="LEDOFF_GROUP_B" />
+  <sysex value="B1662F" name="LEDON_GROUP_C" />
+  <sysex value="B16600" name="LEDOFF_GROUP_C" />
+  <sysex value="B1670B" name="LEDON_GROUP_D" />
+  <sysex value="B16700" name="LEDOFF_GROUP_D" />
+  <sysex value="B1682F" name="LEDON_GROUP_E" />
+  <sysex value="B16800" name="LEDOFF_GROUP_E" />
+  <sysex value="B1690B" name="LEDON_GROUP_F" />
+  <sysex value="B16900" name="LEDOFF_GROUP_F" />
+  <sysex value="B16A2F" name="LEDON_GROUP_G" />
+  <sysex value="B16A00" name="LEDOFF_GROUP_G" />
+  <sysex value="B16B0B" name="LEDON_GROUP_H" />
+  <sysex value="B16B00" name="LEDOFF_GROUP_H" />
+  <sysex value="B1277F" name="LEDON_SAMPLING" />
+  <sysex value="B12500" name="LEDOFF_MIXER" />
+  <sysex value="B12300" name="LEDOFF_PLUGIN" />
+  <sysex value="B12400" name="LEDOFF_ARRANGER" />
+
+  <!-- Luces del touch strip = posicion del crossfader. VirtualDJ no tiene salida de pitch bend,
+       asi que cada <sysex> manda un pitch bend crudo (E0 lsb msb) para uno de 16 tramos.
+       El strip reparte todo el rango 0-16383: tramo 1 = apagado, tramo 16 = lleno -->
+  <sysex value="E00000" name="XF_LED_1" />
+  <sysex value="E04408" name="XF_LED_2" />
+  <sysex value="E00811" name="XF_LED_3" />
+  <sysex value="E04D19" name="XF_LED_4" />
+  <sysex value="E01122" name="XF_LED_5" />
+  <sysex value="E0552A" name="XF_LED_6" />
+  <sysex value="E01933" name="XF_LED_7" />
+  <sysex value="E05D3B" name="XF_LED_8" />
+  <sysex value="E02244" name="XF_LED_9" />
+  <sysex value="E0664C" name="XF_LED_10" />
+  <sysex value="E02A55" name="XF_LED_11" />
+  <sysex value="E06E5D" name="XF_LED_12" />
+  <sysex value="E03266" name="XF_LED_13" />
+  <sysex value="E0776E" name="XF_LED_14" />
+  <sysex value="E03B77" name="XF_LED_15" />
+  <sysex value="E07F7F" name="XF_LED_16" />
+  <sysex value="E00040" name="STRIP_LED_CENTER" />
+
+  <!-- Pantallas: protocolo Mackie, 4 lineas x 28 caracteres.
+       Lineas 0 y 2 = pantalla izquierda (deck 1), lineas 1 y 3 = pantalla derecha (deck 2). Un campo de 27 por linea + un 0x00 fijo en la columna 28 (el Maschine centra las lineas que terminan en espacios), sin desplazamiento.
+       Header F0 00 00 66 17 12 <posicion = linea * 28 + columna>, el texto empieza en el byte 7. -->
+  <text sysex="F000006617120020202020202020202020202020202020202020202020202020202000F7" offset="7" size="27" encoding="ascii" name="LCD_TITLE_D1" scroll="false" deck="1" />
+  <text sysex="F000006617121C20202020202020202020202020202020202020202020202020202000F7" offset="7" size="27" encoding="ascii" name="LCD_TITLE_D2" scroll="false" deck="2" />
+  <text sysex="F000006617123820202020202020202020202020202020202020202020202020202000F7" offset="7" size="27" encoding="ascii" scroll="false" name="LCD_BOTTOM_D1" deck="1" />
+  <text sysex="F000006617125420202020202020202020202020202020202020202020202020202000F7" offset="7" size="27" encoding="ascii" scroll="false" name="LCD_BOTTOM_D2" deck="2" />
+</device>

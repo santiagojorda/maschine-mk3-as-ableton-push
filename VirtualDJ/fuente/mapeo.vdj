@@ -1,0 +1,941 @@
+# Fuente del mapeo de VirtualDJ de la Maschine. generar.py arma con esto Mappers/MASCHINEMK3VDJ - Mapeo Personalizado.xml
+# (no se edita el XML: se edita esto y se corre  python VirtualDJ/generar.py).
+#
+#   NOMBRE = acción           un mapeo; si es larga sigue en las líneas de abajo, con sangría (los espacios no
+#                             importan: VirtualDJ los ignora)
+#   | texto                   va tal cual al XML (comentarios, cabecera); '|' solo = línea vacía
+#   # texto                   comentario de esta fuente, no va al XML
+#
+# No están acá porque los arma generar.py: los pads (PAD1-16), los botones 1-4 (BTN1-4) y sus luces (LED_P*, LED_BTN*),
+# que van después de STEP y del comentario 'LEDs de los pads'. Y a estas acciones generar.py les agrega adelante el
+# modo info de SELECT (HELP_BUTTONS) o los carteles de stems / loop y el modo info (LCD_*): acá está la acción de
+# siempre, sin eso.
+
+| <?xml version="1.0" encoding="UTF-8"?>
+| <!--
+|   Mapeo VirtualDJ para Maschine MK3 (plantilla "CUSTOM MASCHINE").
+|   Mitad izquierda del controlador = deck 1, mitad derecha = deck 2.
+|   $shift se mantiene mientras se aprieta SHIFT.
+|   $vdj = modo VirtualDJ: SAMPLING lo prende, MIXER o PLUGIN lo apagan (vuelve a Ableton).
+| -->
+| <mapper device="MASCHINEMK3VDJ" author="Santiago Jorda" version="850" date="2026-10-05">
+ONINIT =
+    set '$shift' 0
+        & set '$vdj' 0
+        & set '$knob' 0
+        & set '$erase' 0
+        & set '$restart' 0
+        & set '$padpage' 0
+        & set '$browse' 0
+        & (deck 1 key_lock ? nothing : deck 1 key_lock)
+        & (deck 2 key_lock ? nothing : deck 2 key_lock)
+        & set '$pads' 0
+        & set '$padlock' 0
+        & set '$encmode' 0
+        & set '$select' 0
+        & set '$help' 0
+        & set '$stem1' 0
+        & set '$stem2' 0
+        & set '$abstrip' 1
+        & set '$ps' 0
+|
+| 	<!-- SAMPLING pasa el control a VirtualDJ; MIXER o PLUGIN lo devuelven a Ableton.
+| 	     Con el modo apagado, el resto de los controles no hace nada en VirtualDJ -->
+SAMPLING =
+    (var '$vdj' ? nothing : (var '$padlock' ? nothing : set '$padpage' 1))
+        & set '$vdj' 1
+        & set '$encmode' 0
+        & set '$pads' 1
+        & (deck 1 key_lock ? nothing : deck 1 key_lock)
+        & (deck 2 key_lock ? nothing : deck 2 key_lock)
+        & set '$knob' 9
+        & repeat_stop 'xfshow'
+        & repeat_start 'xfshow' 1500ms 1
+        & set '$knob' 0
+| 	<!-- SHIFT + CHANNEL = reposo (standby): sale del modo DJ y suelta los pads; el script de Ableton apaga las luces y las pantallas.
+| 	     Cualquier boton de vista (CHANNEL, PLUGIN, ARRANGER, MIXER, BROWSER, SAMPLING, FILE, SETTINGS) apaga VOLUME / SWING, en los dos modos, igual que en Ableton -->
+CHANNEL =
+    var '$shift'
+        ? (set '$vdj' 0 & set '$select' 0 & set '$encmode' 0 & set '$pads' 0 & set '$padlock' 0)
+        : set '$encmode' 0
+BROWSER = set '$encmode' 0
+SETTING = set '$encmode' 0
+ARRANGER = set '$vdj' 0 & set '$select' 0 & set '$encmode' 0 & (var '$padlock' ? set '$pads' 1 : set '$pads' 0)
+FILE = set '$encmode' 0
+MIXER = set '$vdj' 0 & set '$select' 0 & set '$encmode' 0 & (var '$padlock' ? set '$pads' 1 : set '$pads' 0)
+PLUGIN = set '$vdj' 0 & set '$select' 0 & set '$encmode' 0 & (var '$padlock' ? set '$pads' 1 : set '$pads' 0)
+SHIFT_ON = set '$shift' 1
+SHIFT_OFF = set '$shift' 0
+|
+|
+| 	<!-- Las V-Pots mandan signo+magnitud; se usa solo el signo del valor. 2% por paso (pitch 0.5%) -->
+|
+| 	<!-- PADS: cuatro paginas. KEYBOARD = hot cues, PAD MODE = transporte, CHORDS = stems, STEP = pads apagados y sin funcion. Columnas 1-2 = deck 1, columnas 3-4 = deck 2.
+| 	     Cues: 1-8 de arriba hacia abajo, izquierda a derecha; ERASE + pad = borrar cue.
+| 	     Transporte (por deck, de arriba hacia abajo): LOOP 1/2 | LOOP x2, LOOP 4 (violeta) | PITCH LOCK (naranja), SYNC | INICIO, PLAY | PAUSA. El pitch lock se activa al entrar a SAMPLING.
+| 	     Stems (por deck, de arriba hacia abajo): INSTRUMENTAL | RESET, BASS | ACAPELLA, INSTRU | HIHAT, VOCAL | KICK.
+| 	     La distribucion de pads se genera con generar.py
+| 	     Stems con mute_stem on / off y el estado guardado en $muteN_<stem>, pads independientes: RESET todo, INSTRUMENTAL alterna instru + bass, VOZ alterna la voz, KICK alterna el kick, HATS alterna el hihat -->
+KEYBOARD = set '$encmode' 0 & (var '$pads' ? set '$padpage' 0 : nothing)
+PADMODE = set '$encmode' 0 & (var '$pads' ? set '$padpage' 1 : nothing)
+CHORDS = set '$encmode' 0 & (var '$pads' ? set '$padpage' 2 : nothing)
+STEP = set '$encmode' 0 & (var '$pads' ? set '$padpage' 3 : nothing)
+|
+|
+|
+| 	<!-- PERILLAS: 1-2 jogs deck 1 / deck 2 (SHIFT = salta de a 4 compases), 3-4 tempo deck 1 / 2 (1 BPM por paso), 5-6 volumen deck 1 / 2, 7-8 filtro deck 1 / 2.
+| 	     Las V-Pots mandan signo+magnitud; se usa solo el signo. Jog 0.05 de vuelta por paso (SHIFT: 16 tiempos), mezcla 2% -->
+KNOB1 =
+    var '$vdj'
+        ? (
+            var '$shift'
+                ? (param_greater 0 ? deck 1 goto +16 : deck 1 goto -16)
+                : (param_greater 0 ? deck 1 jogwheel +0.05 : deck 1 jogwheel -0.05)
+        )
+        : nothing
+KNOB2 =
+    var '$vdj'
+        ? (
+            var '$shift'
+                ? (param_greater 0 ? deck 2 goto +16 : deck 2 goto -16)
+                : (param_greater 0 ? deck 2 jogwheel +0.05 : deck 2 jogwheel -0.05)
+        )
+        : nothing
+KNOB3 =
+    var '$vdj'
+        ? (
+            (deck 1 key_lock ? nothing : deck 1 key_lock)
+                & (param_greater 0 ? deck 1 pitch +1 bpm : deck 1 pitch -1 bpm)
+        )
+        : nothing
+KNOB4 =
+    var '$vdj'
+        ? (
+            (deck 2 key_lock ? nothing : deck 2 key_lock)
+                & (param_greater 0 ? deck 2 pitch +1 bpm : deck 2 pitch -1 bpm)
+        )
+        : nothing
+KNOB5 = var '$vdj' ? (param_greater 0 ? deck 1 volume +2% : deck 1 volume -2%) : nothing
+KNOB6 = var '$vdj' ? (param_greater 0 ? deck 2 volume +2% : deck 2 volume -2%) : nothing
+KNOB7 = var '$vdj' ? (param_greater 0 ? deck 1 filter +2% : deck 1 filter -2%) : nothing
+KNOB8 = var '$vdj' ? (param_greater 0 ? deck 2 filter +2% : deck 2 filter -2%) : nothing
+|
+| 	<!-- Botones sobre la pantalla (notas 0-7): sin uso en VirtualDJ, el usuario tiene asignaciones MIDI de Ableton ahi -->
+|
+|
+| 	<!-- Browser -->
+BROWSE =
+    var '$vdj'
+        ? (
+            var '$encmode' 1
+                ? (param_greater 0 ? master_volume +2% : master_volume -2%)
+                : (
+                    var '$encmode' 2
+                        ? (param_greater 0 ? headphone_volume +2% : headphone_volume -2%)
+                        : (
+                            var '$encmode' 3
+                                ? nothing
+                                : (param_greater 0 ? browser_scroll +1 : browser_scroll -1)
+                        )
+                )
+        )
+        : nothing
+| 	<!-- Apretar alterna carpetas / temas; el encoder gira dentro de esa zona -->
+ENCODER_PUSH =
+    var '$vdj'
+        ? (
+            browser_window 'folders,songs'
+                & (
+                    var '$encmode' 0
+                        ? (browser_window 'songs' ? set '$browse' 1 : set '$browse' 2)
+                        : set '$browse' 0
+                )
+        )
+        : nothing
+| 	<!-- Inclinar el encoder arriba / abajo solo mueve la lista: si cambiara el foco, una inclinacion sin querer al girar lo resetea -->
+ENCODER_UP = var '$vdj' ? (browser_scroll -1) : nothing
+ENCODER_DOWN = var '$vdj' ? (browser_scroll +1) : nothing
+| 	<!-- Costados: en carpetas abre / cierra la carpeta; en temas carga en deck 1 (izq) o deck 2 (der).
+| 	     SHIFT + costado: copia en ese deck lo que suena en el otro (clone_from_deck), sin importar el browser -->
+ENCODER_LEFT =
+    var '$vdj'
+        ? (
+            var '$shift'
+                ? deck 1 clone_from_deck
+                : (browser_window 'folders' ? browser_open_folder : deck 1 load)
+        )
+        : nothing
+ENCODER_RIGHT =
+    var '$vdj'
+        ? (
+            var '$shift'
+                ? deck 2 clone_from_deck
+                : (browser_window 'folders' ? browser_open_folder : deck 2 load)
+        )
+        : nothing
+|
+| 	<!-- Tocar el encoder grande: en la lista de temas muestra el tema seleccionado (izquierda titulo / artista, derecha BPM);
+| 	     en las carpetas muestra solo el nombre de la carpeta. $browse: 0 sin tocar, 1 temas, 2 carpetas.
+| 	     NOTES = preescucha tipo gate: suena mientras esta apretado (prelisten) y se corta al soltarlo -->
+ENCODER_TOUCH =
+    param_bigger 0.5
+        ? (
+            var '$encmode' 0
+                ? (browser_window 'songs' ? set '$browse' 1 : set '$browse' 2)
+                : set '$browse' 0
+        )
+        : set '$browse' 0
+NOTES = var '$vdj' ? (param_bigger 0.5 ? prelisten on : prelisten_stop) : nothing
+|
+| 	<!-- LOCK: en modo VirtualDJ fija los pads a VirtualDJ ($padlock) para que sigan aca al volver a Ableton.
+| 	     En Ableton, LOCK los suelta (el script de Ableton hace lo mismo del lado de Ableton).
+| 	     VOLUME / SWING: el encoder grande controla el volumen master / de auriculares ($encmode 1 / 2) y la pantalla izquierda lo muestra.
+| 	     TEMPO ($encmode 3): el encoder controla el TEMPO DE ABLETON (lo hace el script de Ableton; VirtualDJ solo lo ignora)
+| 	     y la pantalla derecha muestra la vista de tempo. SHIFT + TEMPO no cambia de vista: solo iguala el tempo de Ableton con
+| 	     el de VirtualDJ (lo hace el script de Ableton). -->
+LOCK = var '$vdj' ? toggle '$padlock' : (set '$padlock' 0 & set '$pads' 0)
+VOLUME = var '$encmode' 1 ? set '$encmode' 0 : set '$encmode' 1
+TEMPO =
+    var '$select' 1
+        ? nothing
+        : (var '$shift' ? nothing : (var '$encmode' 3 ? set '$encmode' 0 : set '$encmode' 3))
+SWING = var '$encmode' 2 ? set '$encmode' 0 : set '$encmode' 2
+LEDON_LOCK = var '$vdj' ? (var '$padlock') : false
+LEDOFF_LOCK = var '$vdj' ? (var '$padlock' ? false : true) : false
+FOLLOW = var '$vdj' ? (deck master effect_active 'Ableton Link') : nothing
+LEDON_FOLLOW = var '$vdj' ? (deck master effect_active 'Ableton Link') : false
+LEDOFF_FOLLOW = var '$vdj' ? (deck master effect_active 'Ableton Link' ? false : true) : false
+LEDON_VOLUME = var '$vdj' ? (var '$encmode' 1) : false
+LEDOFF_VOLUME = var '$vdj' ? (var '$encmode' 1 ? false : true) : false
+LEDON_TEMPO = var '$vdj' ? (var '$encmode' 3) : false
+LEDOFF_TEMPO = var '$vdj' ? (var '$encmode' 3 ? false : true) : false
+LEDON_SWING = var '$vdj' ? (var '$encmode' 2) : false
+LEDOFF_SWING = var '$vdj' ? (var '$encmode' 2 ? false : true) : false
+|
+| 	<!-- SELECT = modo info: mientras se mantiene (en modo VirtualDJ), tocar un pad o boton muestra su nombre en la pantalla
+| 	     izquierda en vez de hacer su accion ($help = codigo). Generado por generar.py -->
+SELECT =
+    var '$vdj'
+        ? (param_bigger 0.5 ? (set '$select' 1 & set '$help' 0) : set '$select' 0)
+        : set '$select' 0
+|
+| 	<!-- Transporte (deck seleccionado con LEFT / RIGHT). PLAY y STOP (y SHIFT + STOP) son de Ableton tambien en modo DJ -->
+| 	<!-- RESTART + tocar la perilla 1 / 2 = inicio del tema del deck 1 / 2 ($restart 1 = apretado, 2 = ya se uso con una perilla).
+| 	     RESTART + ERASE (en cualquier orden) = apagar los 3 efectos y centrar el filtro en los dos decks.
+| 	     RESTART solo = inicio del tema del deck elegido, al soltarlo y solo si no se toco una perilla -->
+RESTART =
+    param_bigger 0.5
+        ? (
+            var '$erase'
+                ? (
+                    var '$vdj'
+                        ? (
+                            deck 1 effect_active 1 off
+                                & deck 1 effect_active 2 off
+                                & deck 1 effect_active 3 off
+                                & deck 2 effect_active 1 off
+                                & deck 2 effect_active 2 off
+                                & deck 2 effect_active 3 off
+                                & deck 1 filter 50%
+                                & deck 2 filter 50%
+                                & set '$restart' 2
+                        )
+                        : nothing
+                )
+                : set '$restart' 1
+        )
+        : set '$restart' 0
+LEFT = var '$vdj' ? (deck 1 select) : nothing
+RIGHT = var '$vdj' ? (deck 2 select) : nothing
+| 	<!-- STOP pausa el tema donde esta (no vuelve al cue) -->
+|
+| 	<!-- LOCK (pads fijados a VirtualDJ, $pads): el touch strip (crossfader) y los botones A-H tambien quedan en VirtualDJ al
+| 	     volver a Ableton; por eso estos mapeos miran $pads (modo DJ o LOCK) y no $vdj (solo modo DJ) -->
+| 	<!-- Touch strip = crossfader: toma la posicion absoluta donde tocas (sin soft takeover) y queda ahi al soltar -->
+| 	<!-- Fuera del modo DJ, con Ableton en PITCH: VirtualDJ hace de espejo y prende las luces del strip segun el dedo
+| 	     ($ps, 0 = suelto / centro). El script de Ableton no puede: si recibe el pitch bend, Ableton no se lo pasa a la pista.
+| 	     $abstrip sigue el modo del touch strip de Ableton: 1 PITCH, 2 MOD, 3 PERFORM (las luces se prenden salvo en MOD / PERFORM).
+| 	     La posicion ($ps) se calcula fuera de las condiciones (al final, despues del crossfader de modo DJ) -->
+TOUCHSTRIP_RELEASE = var '$pads' ? nothing : set '$ps' 0
+PITCH = var '$vdj' ? nothing : set '$abstrip' 1
+MOD = var '$vdj' ? nothing : set '$abstrip' 2
+PERFORM = var '$vdj' ? nothing : set '$abstrip' 3
+TOUCHSTRIP =
+    (
+        var '$pads'
+            ? (
+                crossfader
+                    & set '$knob' 9
+                    & repeat_stop 'xfshow'
+                    & repeat_start 'xfshow' 1500ms 1
+                    & set '$knob' 0
+            )
+            : nothing
+    )
+        & (
+            param_smaller 6.25%
+                ? set '$ps' 1
+                : param_smaller 12.5%
+                ? set '$ps' 2
+                : param_smaller 18.75%
+                ? set '$ps' 3
+                : param_smaller 25%
+                ? set '$ps' 4
+                : param_smaller 31.25%
+                ? set '$ps' 5
+                : param_smaller 37.5%
+                ? set '$ps' 6
+                : param_smaller 43.75%
+                ? set '$ps' 7
+                : param_smaller 50%
+                ? set '$ps' 8
+                : param_smaller 56.25%
+                ? set '$ps' 9
+                : param_smaller 62.5%
+                ? set '$ps' 10
+                : param_smaller 68.75%
+                ? set '$ps' 11
+                : param_smaller 75%
+                ? set '$ps' 12
+                : param_smaller 81.25%
+                ? set '$ps' 13
+                : param_smaller 87.5%
+                ? set '$ps' 14
+                : param_smaller 93.75%
+                ? set '$ps' 15
+                : set '$ps' 16
+        )
+|
+| 	<!-- LEDs -->
+|
+| 	<!-- LEDs de los pads: LED_P<pad>_<color> se envia cuando su condicion pasa a verdadera.
+| 	     Pagina 0 (KEYBOARD) = cues: color del deck si hay cue, apagado si no.
+| 	     Pagina 1 (PAD MODE) = transporte: color tenue, fuerte cuando la funcion esta activa.
+| 	     Pagina 2 (CHORDS) = stems: fuerte mientras el stem suena, tenue si esta silenciado -->
+LEDON_KEYBOARD = var '$pads' ? (var '$padpage' 0) : false
+LEDOFF_KEYBOARD = var '$pads' ? (var '$padpage' 0 ? false : true) : false
+LEDON_PADMODE = var '$pads' ? (var '$padpage' 1) : false
+LEDOFF_PADMODE = var '$pads' ? (var '$padpage' 1 ? false : true) : false
+LEDON_CHORDS = var '$pads' ? (var '$padpage' 2) : false
+LEDOFF_CHORDS = var '$pads' ? (var '$padpage' 2 ? false : true) : false
+LEDON_STEP = var '$pads' ? (var '$padpage' 3) : false
+LEDOFF_STEP = var '$pads' ? (var '$padpage' 3 ? false : true) : false
+|
+| 	<!-- LEDs: X_ON se envia cuando la condicion pasa a verdadera, X_OFF cuando pasa a falsa.
+| 	     Fuera del modo VirtualDJ no se manda nada (Ableton redibuja sus luces) -->
+LEDON_SAMPLING = var '$vdj'
+| 	<!-- En modo DJ se apagan las luces de MIXER, PLUGIN y ARRANGER (Ableton deja de mandar luces y quedaban prendidas) -->
+LEDOFF_MIXER = var '$vdj'
+LEDOFF_PLUGIN = var '$vdj'
+LEDOFF_ARRANGER = var '$vdj'
+|
+| 	<!-- Grupos A-H (CC 100-107): A C E G = deck 1 (azul), B D F H = deck 2 (naranja).
+| 	     A/B reverb, C/D flanger, E/F echo, G/H preescucha (pfl). Apagados; con color solo cuando estan activos -->
+GROUP_A = var '$pads' ? (deck 1 effect_active 'Reverb') : nothing
+LEDON_GROUP_A = var '$pads' ? (deck 1 effect_active 'Reverb') : false
+LEDOFF_GROUP_A = var '$pads' ? (deck 1 effect_active 'Reverb' ? false : true) : false
+GROUP_B = var '$pads' ? (deck 2 effect_active 'Reverb') : nothing
+LEDON_GROUP_B = var '$pads' ? (deck 2 effect_active 'Reverb') : false
+LEDOFF_GROUP_B = var '$pads' ? (deck 2 effect_active 'Reverb' ? false : true) : false
+GROUP_C = var '$pads' ? (deck 1 effect_active 'Flanger') : nothing
+LEDON_GROUP_C = var '$pads' ? (deck 1 effect_active 'Flanger') : false
+LEDOFF_GROUP_C = var '$pads' ? (deck 1 effect_active 'Flanger' ? false : true) : false
+GROUP_D = var '$pads' ? (deck 2 effect_active 'Flanger') : nothing
+LEDON_GROUP_D = var '$pads' ? (deck 2 effect_active 'Flanger') : false
+LEDOFF_GROUP_D = var '$pads' ? (deck 2 effect_active 'Flanger' ? false : true) : false
+GROUP_E = var '$pads' ? (deck 1 effect_active 'Echo') : nothing
+LEDON_GROUP_E = var '$pads' ? (deck 1 effect_active 'Echo') : false
+LEDOFF_GROUP_E = var '$pads' ? (deck 1 effect_active 'Echo' ? false : true) : false
+GROUP_F = var '$pads' ? (deck 2 effect_active 'Echo') : nothing
+LEDON_GROUP_F = var '$pads' ? (deck 2 effect_active 'Echo') : false
+LEDOFF_GROUP_F = var '$pads' ? (deck 2 effect_active 'Echo' ? false : true) : false
+GROUP_G = var '$pads' ? (deck 1 pfl) : nothing
+LEDON_GROUP_G = var '$pads' ? (deck 1 pfl) : false
+LEDOFF_GROUP_G = var '$pads' ? (deck 1 pfl ? false : true) : false
+GROUP_H = var '$pads' ? (deck 2 pfl) : nothing
+LEDON_GROUP_H = var '$pads' ? (deck 2 pfl) : false
+LEDOFF_GROUP_H = var '$pads' ? (deck 2 pfl ? false : true) : false
+|
+| 	<!-- Luces del touch strip: en modo DJ consulta directo la posicion real del crossfader (se restaura al instante al entrar); en Ableton sigue $ps -->
+STRIP_LED_CENTER =
+    var '$pads'
+        ? false
+        : (
+            var '$abstrip' 2
+                ? false
+                : (var '$abstrip' 3 ? false : (var_smaller '$ps' 0.5 ? true : false))
+        )
+XF_LED_1 =
+    var '$pads'
+        ? (param_smaller 6.25% crossfader ? true : false)
+        : (
+            var '$abstrip' 2
+                ? false
+                : (
+                    var '$abstrip' 3
+                        ? false
+                        : (var_greater '$ps' 0.5 ? (var_smaller '$ps' 1.5 ? true : false) : false)
+                )
+        )
+XF_LED_2 =
+    var '$pads'
+        ? (param_bigger 6.25% crossfader ? (param_smaller 12.5% crossfader ? true : false) : false)
+        : (
+            var '$abstrip' 2
+                ? false
+                : (
+                    var '$abstrip' 3
+                        ? false
+                        : (var_greater '$ps' 1.5 ? (var_smaller '$ps' 2.5 ? true : false) : false)
+                )
+        )
+XF_LED_3 =
+    var '$pads'
+        ? (param_bigger 12.5% crossfader ? (param_smaller 18.75% crossfader ? true : false) : false)
+        : (
+            var '$abstrip' 2
+                ? false
+                : (
+                    var '$abstrip' 3
+                        ? false
+                        : (var_greater '$ps' 2.5 ? (var_smaller '$ps' 3.5 ? true : false) : false)
+                )
+        )
+XF_LED_4 =
+    var '$pads'
+        ? (param_bigger 18.75% crossfader ? (param_smaller 25% crossfader ? true : false) : false)
+        : (
+            var '$abstrip' 2
+                ? false
+                : (
+                    var '$abstrip' 3
+                        ? false
+                        : (var_greater '$ps' 3.5 ? (var_smaller '$ps' 4.5 ? true : false) : false)
+                )
+        )
+XF_LED_5 =
+    var '$pads'
+        ? (param_bigger 25% crossfader ? (param_smaller 31.25% crossfader ? true : false) : false)
+        : (
+            var '$abstrip' 2
+                ? false
+                : (
+                    var '$abstrip' 3
+                        ? false
+                        : (var_greater '$ps' 4.5 ? (var_smaller '$ps' 5.5 ? true : false) : false)
+                )
+        )
+XF_LED_6 =
+    var '$pads'
+        ? (param_bigger 31.25% crossfader ? (param_smaller 37.5% crossfader ? true : false) : false)
+        : (
+            var '$abstrip' 2
+                ? false
+                : (
+                    var '$abstrip' 3
+                        ? false
+                        : (var_greater '$ps' 5.5 ? (var_smaller '$ps' 6.5 ? true : false) : false)
+                )
+        )
+XF_LED_7 =
+    var '$pads'
+        ? (param_bigger 37.5% crossfader ? (param_smaller 43.75% crossfader ? true : false) : false)
+        : (
+            var '$abstrip' 2
+                ? false
+                : (
+                    var '$abstrip' 3
+                        ? false
+                        : (var_greater '$ps' 6.5 ? (var_smaller '$ps' 7.5 ? true : false) : false)
+                )
+        )
+XF_LED_8 =
+    var '$pads'
+        ? (param_bigger 43.75% crossfader ? (param_smaller 50.01% crossfader ? true : false) : false)
+        : (
+            var '$abstrip' 2
+                ? false
+                : (
+                    var '$abstrip' 3
+                        ? false
+                        : (var_greater '$ps' 7.5 ? (var_smaller '$ps' 8.5 ? true : false) : false)
+                )
+        )
+XF_LED_9 =
+    var '$pads'
+        ? (param_bigger 50% crossfader ? (param_smaller 56.25% crossfader ? true : false) : false)
+        : (
+            var '$abstrip' 2
+                ? false
+                : (
+                    var '$abstrip' 3
+                        ? false
+                        : (var_greater '$ps' 8.5 ? (var_smaller '$ps' 9.5 ? true : false) : false)
+                )
+        )
+XF_LED_10 =
+    var '$pads'
+        ? (param_bigger 56.25% crossfader ? (param_smaller 62.5% crossfader ? true : false) : false)
+        : (
+            var '$abstrip' 2
+                ? false
+                : (
+                    var '$abstrip' 3
+                        ? false
+                        : (var_greater '$ps' 9.5 ? (var_smaller '$ps' 10.5 ? true : false) : false)
+                )
+        )
+XF_LED_11 =
+    var '$pads'
+        ? (param_bigger 62.5% crossfader ? (param_smaller 68.75% crossfader ? true : false) : false)
+        : (
+            var '$abstrip' 2
+                ? false
+                : (
+                    var '$abstrip' 3
+                        ? false
+                        : (var_greater '$ps' 10.5 ? (var_smaller '$ps' 11.5 ? true : false) : false)
+                )
+        )
+XF_LED_12 =
+    var '$pads'
+        ? (param_bigger 68.75% crossfader ? (param_smaller 75% crossfader ? true : false) : false)
+        : (
+            var '$abstrip' 2
+                ? false
+                : (
+                    var '$abstrip' 3
+                        ? false
+                        : (var_greater '$ps' 11.5 ? (var_smaller '$ps' 12.5 ? true : false) : false)
+                )
+        )
+XF_LED_13 =
+    var '$pads'
+        ? (param_bigger 75% crossfader ? (param_smaller 81.25% crossfader ? true : false) : false)
+        : (
+            var '$abstrip' 2
+                ? false
+                : (
+                    var '$abstrip' 3
+                        ? false
+                        : (var_greater '$ps' 12.5 ? (var_smaller '$ps' 13.5 ? true : false) : false)
+                )
+        )
+XF_LED_14 =
+    var '$pads'
+        ? (param_bigger 81.25% crossfader ? (param_smaller 87.5% crossfader ? true : false) : false)
+        : (
+            var '$abstrip' 2
+                ? false
+                : (
+                    var '$abstrip' 3
+                        ? false
+                        : (var_greater '$ps' 13.5 ? (var_smaller '$ps' 14.5 ? true : false) : false)
+                )
+        )
+XF_LED_15 =
+    var '$pads'
+        ? (param_bigger 87.5% crossfader ? (param_smaller 93.75% crossfader ? true : false) : false)
+        : (
+            var '$abstrip' 2
+                ? false
+                : (
+                    var '$abstrip' 3
+                        ? false
+                        : (var_greater '$ps' 14.5 ? (var_smaller '$ps' 15.5 ? true : false) : false)
+                )
+        )
+XF_LED_16 =
+    var '$pads'
+        ? (param_bigger 93.75% crossfader ? true : false)
+        : (
+            var '$abstrip' 2
+                ? false
+                : (
+                    var '$abstrip' 3
+                        ? false
+                        : (var_greater '$ps' 15.5 ? (var_smaller '$ps' 16.5 ? true : false) : false)
+                )
+        )
+|
+|
+|
+|
+|
+| 	<!-- Tocar una perilla de mezcla muestra su nombre y valor: perillas 1-4 en la pantalla izquierda, 5-8 en la derecha.
+| 	     ERASE + tocar: vuelve al centro (volumen al 100%; en los jogs y en las perillas de BPM, ERASE + tocar vuelve al tempo original de a poco) -->
+ERASE =
+    param_bigger 0.5
+        ? (
+            var '$restart'
+                ? (
+                    var '$vdj'
+                        ? (
+                            deck 1 effect_active 1 off
+                                & deck 1 effect_active 2 off
+                                & deck 1 effect_active 3 off
+                                & deck 2 effect_active 1 off
+                                & deck 2 effect_active 2 off
+                                & deck 2 effect_active 3 off
+                                & deck 1 filter 50%
+                                & deck 2 filter 50%
+                                & set '$restart' 2
+                                & set '$erase' 1
+                        )
+                        : set '$erase' 1
+                )
+                : set '$erase' 1
+        )
+        : set '$erase' 0
+| 	<!-- RESTART solo no hace nada. RESTART + ERASE (en cualquier orden): apaga los efectos de los dos decks y pone los filtros al centro (volumenes y tempo no).
+| 	     RESTART + tocar una perilla: inicio del tema (jogs 1-2) o valor por defecto (tempo, volumen 100%, filtro al centro), como en Ableton.
+| 	     ERASE + tocar sigue reseteando igual. -->
+KNOB1_TOUCH =
+    param_bigger 0.5
+        ? (
+            (
+                var '$vdj'
+                    ? (
+                        var '$erase'
+                            ? deck 1 pitch_reset
+                            : (var '$restart' 0 ? nothing : (deck 1 goto_start & set '$restart' 2))
+                    )
+                    : nothing
+            )
+                & set '$knob' 1
+        )
+        : set '$knob' 0
+KNOB2_TOUCH =
+    param_bigger 0.5
+        ? (
+            (
+                var '$vdj'
+                    ? (
+                        var '$erase'
+                            ? deck 2 pitch_reset
+                            : (var '$restart' 0 ? nothing : (deck 2 goto_start & set '$restart' 2))
+                    )
+                    : nothing
+            )
+                & set '$knob' 2
+        )
+        : set '$knob' 0
+KNOB3_TOUCH =
+    param_bigger 0.5
+        ? (
+            (
+                var '$vdj'
+                    ? (
+                        var '$restart' 0
+                            ? (var '$erase' ? deck 1 pitch_reset : nothing)
+                            : (deck 1 pitch_reset & set '$restart' 2)
+                    )
+                    : nothing
+            )
+                & set '$knob' 3
+        )
+        : set '$knob' 0
+KNOB4_TOUCH =
+    param_bigger 0.5
+        ? (
+            (
+                var '$vdj'
+                    ? (
+                        var '$restart' 0
+                            ? (var '$erase' ? deck 2 pitch_reset : nothing)
+                            : (deck 2 pitch_reset & set '$restart' 2)
+                    )
+                    : nothing
+            )
+                & set '$knob' 4
+        )
+        : set '$knob' 0
+KNOB5_TOUCH =
+    param_bigger 0.5
+        ? (
+            (
+                var '$vdj'
+                    ? (
+                        var '$restart' 0
+                            ? (var '$erase' ? deck 1 volume 100% : nothing)
+                            : (deck 1 volume 100% & set '$restart' 2)
+                    )
+                    : nothing
+            )
+                & set '$knob' 5
+        )
+        : set '$knob' 0
+KNOB6_TOUCH =
+    param_bigger 0.5
+        ? (
+            (
+                var '$vdj'
+                    ? (
+                        var '$restart' 0
+                            ? (var '$erase' ? deck 2 volume 100% : nothing)
+                            : (deck 2 volume 100% & set '$restart' 2)
+                    )
+                    : nothing
+            )
+                & set '$knob' 6
+        )
+        : set '$knob' 0
+KNOB7_TOUCH =
+    param_bigger 0.5
+        ? (
+            (
+                var '$vdj'
+                    ? (
+                        var '$restart' 0
+                            ? (var '$erase' ? deck 1 filter 50% : nothing)
+                            : (deck 1 filter 50% & set '$restart' 2)
+                    )
+                    : nothing
+            )
+                & set '$knob' 7
+        )
+        : set '$knob' 0
+KNOB8_TOUCH =
+    param_bigger 0.5
+        ? (
+            (
+                var '$vdj'
+                    ? (
+                        var '$restart' 0
+                            ? (var '$erase' ? deck 2 filter 50% : nothing)
+                            : (deck 2 filter 50% & set '$restart' 2)
+                    )
+                    : nothing
+            )
+                & set '$knob' 8
+        )
+        : set '$knob' 0
+|
+| 	<!-- PANTALLAS: izquierda = deck 1, derecha = deck 2. Arriba el tema; abajo BPM y MASTER/SYNC/NO SYNC en un solo campo.
+| 	     Tocando una perilla: arriba su nombre, abajo su valor. Tocando el encoder grande (browser): izquierda titulo / artista
+| 	     del tema seleccionado, derecha solo su BPM. Sin desplazamiento. Fuera del modo se manda '' para forzar el redibujado -->
+LCD_TITLE_D1 =
+    var '$vdj'
+        ? (
+            var '$encmode' 0
+                ? (
+                    var '$browse' 2
+                        ? (get_browsed_folder)
+                        : (
+                            var '$browse' 1
+                                ? (get_browsed_song 'title')
+                                : (
+                                    var '$knob' 1
+                                        ? (get_text 'MOVIENDO JOG')
+                                        : (
+                                            var '$knob' 2
+                                                ? (get_text 'MOVIENDO JOG')
+                                                : (
+                                                    var '$knob' 9
+                                                        ? (get_text 'CROSSFADER')
+                                                        : var '$knob' 3
+                                                        ? (get_text 'TEMPO D1')
+                                                        : (
+                                                            var '$knob' 4
+                                                                ? (get_text 'TEMPO D2')
+                                                                : (
+                                                                    deck 1 deck_has_error
+                                                                        ? deck 1 get_title
+                                                                        : (
+                                                                            deck 1 loaded
+                                                                                ? deck 1 get_title
+                                                                                : get_text 'DECK 1'
+                                                                        )
+                                                                )
+                                                        )
+                                                )
+                                        )
+                                )
+                        )
+                )
+                : (var '$encmode' 1 ? get_text 'VOLUMEN MASTER' : get_text 'VOLUMEN AURIS')
+        )
+        : get_text ''
+LCD_BOTTOM_D1 =
+    var '$vdj'
+        ? (
+            var '$encmode' 0
+                ? (
+                    var '$browse' 2
+                        ? (get_text ' ')
+                        : (
+                            var '$browse' 1
+                                ? (get_browsed_song 'artist')
+                                : (
+                                    var '$knob' 1
+                                        ? (get_text 'DECK 1')
+                                        : (
+                                            var '$knob' 2
+                                                ? (get_text 'DECK 2')
+                                                : (
+                                                    var '$knob' 9
+                                                        ? (
+                                                            get_text "`crossfader & param_add -0.5 & param_multiply 100 & param_cast 'integer' & param_cast 'text' 4`%"
+                                                        )
+                                                        : var '$knob' 3
+                                                        ? (
+                                                            get_text "`deck 1 get_bpm & param_cast 'integer' & param_cast 'text' 6`      ORIGINAL `deck 1 get_bpm absolute & param_cast 'text' 6`"
+                                                        )
+                                                        : (
+                                                            var '$knob' 4
+                                                                ? (
+                                                                    get_text "`deck 2 get_bpm & param_cast 'integer' & param_cast 'text' 6`      ORIGINAL `deck 2 get_bpm absolute & param_cast 'text' 6`"
+                                                                )
+                                                                : (
+                                                                    deck 1 deck_has_error
+                                                                        ? get_text 'Error al cargar!'
+                                                                        : (
+                                                                            deck 1 loaded
+                                                                                ? (
+                                                                                    deck 1 masterdeck
+                                                                                        ? get_text "`deck 1 get_bpm & param_cast 'text' 6`        MASTER"
+                                                                                        : (
+                                                                                            (
+                                                                                                deck 1 match_bpm
+                                                                                                    ? true
+                                                                                                    : (
+                                                                                                        deck 1 is_sync
+                                                                                                            ? true
+                                                                                                            : false
+                                                                                                    )
+                                                                                            )
+                                                                                                ? get_text "`deck 1 get_bpm & param_cast 'text' 6`        SYNC"
+                                                                                                : get_text "`deck 1 get_bpm & param_cast 'text' 6`        NO SYNC"
+                                                                                        )
+                                                                                )
+                                                                                : get_text '---'
+                                                                        )
+                                                                )
+                                                        )
+                                                )
+                                        )
+                                )
+                        )
+                )
+                : (
+                    var '$encmode' 1
+                        ? (master_volume & param_cast 'percentage' & param_cast 'text' 6)
+                        : (headphone_volume & param_cast 'percentage' & param_cast 'text' 6)
+                )
+        )
+        : get_text ''
+LCD_TITLE_D2 =
+    var '$vdj'
+        ? (
+            var '$encmode' 0
+                ? (
+                    var '$browse' 2
+                        ? (get_text ' ')
+                        : (
+                            var '$browse' 1
+                                ? (get_text ' ')
+                                : (
+                                    var '$knob' 5
+                                        ? (get_text 'VOLUMEN D1')
+                                        : (
+                                            var '$knob' 6
+                                                ? (get_text 'VOLUMEN D2')
+                                                : (
+                                                    var '$knob' 7
+                                                        ? (get_text 'FILTRO D1')
+                                                        : (
+                                                            var '$knob' 8
+                                                                ? (get_text 'FILTRO D2')
+                                                                : (
+                                                                    deck 2 deck_has_error
+                                                                        ? deck 2 get_title
+                                                                        : (
+                                                                            deck 2 loaded
+                                                                                ? deck 2 get_title
+                                                                                : get_text 'DECK 2'
+                                                                        )
+                                                                )
+                                                        )
+                                                )
+                                        )
+                                )
+                        )
+                )
+                : get_text ' '
+        )
+        : get_text ''
+LCD_BOTTOM_D2 =
+    var '$vdj'
+        ? (
+            var '$encmode' 0
+                ? (
+                    var '$browse' 2
+                        ? (get_text ' ')
+                        : (
+                            var '$browse' 1
+                                ? (get_browsed_song 'bpm' & param_cast 'text' 6)
+                                : (
+                                    var '$knob' 5
+                                        ? (
+                                            deck 1 volume
+                                                & param_cast 'percentage'
+                                                & param_cast 'text' 6
+                                        )
+                                        : (
+                                            var '$knob' 6
+                                                ? (
+                                                    deck 2 volume
+                                                        & param_cast 'percentage'
+                                                        & param_cast 'text' 6
+                                                )
+                                                : (
+                                                    var '$knob' 7
+                                                        ? (
+                                                            deck 1 filter
+                                                                & param_add -0.5
+                                                                & param_cast 'percentage'
+                                                                & param_cast 'text' 6
+                                                        )
+                                                        : (
+                                                            var '$knob' 8
+                                                                ? (
+                                                                    deck 2 filter
+                                                                        & param_add -0.5
+                                                                        & param_cast 'percentage'
+                                                                        & param_cast 'text' 6
+                                                                )
+                                                                : (
+                                                                    deck 2 deck_has_error
+                                                                        ? get_text 'Error al cargar!'
+                                                                        : (
+                                                                            deck 2 loaded
+                                                                                ? (
+                                                                                    deck 2 masterdeck
+                                                                                        ? get_text "`deck 2 get_bpm & param_cast 'text' 6`        MASTER"
+                                                                                        : (
+                                                                                            (
+                                                                                                deck 2 match_bpm
+                                                                                                    ? true
+                                                                                                    : (
+                                                                                                        deck 2 is_sync
+                                                                                                            ? true
+                                                                                                            : false
+                                                                                                    )
+                                                                                            )
+                                                                                                ? get_text "`deck 2 get_bpm & param_cast 'text' 6`        SYNC"
+                                                                                                : get_text "`deck 2 get_bpm & param_cast 'text' 6`        NO SYNC"
+                                                                                        )
+                                                                                )
+                                                                                : get_text '---'
+                                                                        )
+                                                                )
+                                                        )
+                                                )
+                                        )
+                                )
+                        )
+                )
+                : get_text ' '
+        )
+        : get_text ''
+| </mapper>

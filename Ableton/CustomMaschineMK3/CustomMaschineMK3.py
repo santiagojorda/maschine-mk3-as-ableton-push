@@ -1294,8 +1294,9 @@ class CustomMaschineMK3(ControlSurface):
             self._vdj_tempo_last = latest
             if latest.get("v") != Protocolo.VERSION:
                 # Still used (the fields may be the same), but the log says why it could go wrong
-                self._log_error_once("protocol version", f"the screens driver sends protocol v{latest.get('v')}, "
-                                     f"the script expects v{Protocolo.VERSION}: install both from the same branch")
+                sent = f"protocol v{latest['v']}" if latest.get("v") is not None else "an unversioned (old) protocol"
+                self._log_error_once("protocol version", f"the screens driver sends {sent}, the script expects "
+                                     f"v{Protocolo.VERSION}: install both from the same branch")
         message = self._vdj_tempo_last
         if not message or time.time() - message.get("t", 0) > VDJ_TEMPO_MAX_AGE:
             return None

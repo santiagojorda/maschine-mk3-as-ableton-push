@@ -55,7 +55,9 @@ class AbletonText:
         self._tempo = (None, 0.0)  # tempo de Ableton que manda el script en modo DJ
         self._flash = (None, 0.0)  # (BPM, hasta cuándo) de la vista de tempo pasajera de SHIFT + TEMPO
         self.flash_version = 0
-        self._other_version = None  # versión del protocolo distinta que ya se avisó en el registro
+        # Última versión del protocolo que llegó y ya se avisó si era distinta (empieza en la propia: un mensaje sin
+        # "v", de un script viejo, trae None y también se avisa)
+        self._other_version = protocolo.VERSION
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._socket.bind((protocolo.HOST, port))
         self._socket.settimeout(0.5)
@@ -88,8 +90,9 @@ class AbletonText:
             if version != protocolo.VERSION and version != self._other_version:
                 # Se dibuja igual (los campos pueden no haber cambiado), pero queda dicho por qué podría verse mal
                 self._other_version = version
-                log.warning(f"El script de Ableton habla el protocolo v{version} y las pantallas el "
-                            f"v{protocolo.VERSION}: instalá los dos desde la misma rama")
+                del_script = f"el protocolo v{version}" if version is not None else "un protocolo sin versión (es viejo)"
+                log.warning(f"El script de Ableton habla {del_script} y las pantallas el v{protocolo.VERSION}: "
+                            f"instalá los dos desde la misma rama")
             with self._lock:
                 now = time.perf_counter()
                 if state.get("type") == protocolo.TYPE_TEMPO_FLASH:

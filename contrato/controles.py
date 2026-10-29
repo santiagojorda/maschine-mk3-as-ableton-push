@@ -81,12 +81,14 @@ CONTROLES = (
     _boton("ARRANGER", 36, dj="ambos", reposo="ableton", por_que=_SALE_DE_DJ + "; en reposo " + _DESPIERTA),
     _boton("MIXER", 37, dj="ambos", reposo="ableton", por_que=_SALE_DE_DJ + "; en reposo " + _DESPIERTA),
     _boton("BROWSER", 38),
-    _boton("SAMPLING", 39, ableton_modo="ambos", lock="ambos", dj="ambos", reposo="ambos",
-           por_que="entra al modo DJ: Ableton deja de escuchar y VirtualDJ empieza (y prende el key lock)"),
+    _boton("SAMPLING", 39, ableton_modo="ambos", lock="ambos", reposo="ambos",
+           por_que="entra al modo DJ: Ableton deja de escuchar y VirtualDJ empieza (y prende el key lock); ya en modo "
+                   "DJ, Ableton solo apaga el modo del encoder"),
     _boton("FILE", 40),
     _boton("SETTING", 41),
     _boton("AUTO", 42),
-    _boton("MACRO", 43, dj="ableton", por_que="SHIFT + MACRO reinicia las pantallas desde cualquier modo"),
+    _boton("MACRO", 43, dj="ableton", reposo="ableton",
+           por_que="SHIFT + MACRO reinicia las pantallas desde cualquier modo, también en reposo"),
 
     # Modo del encoder y modificadores
     _boton("VOLUME", 44, dj="ambos", por_que="los dos llevan el modo del encoder (VOLUME / SWING / TEMPO)"),
@@ -132,8 +134,9 @@ CONTROLES = (
     _boton("LEFT", 110),
     _boton("RIGHT", 111),
     # VirtualDJ lee SHIFT por sysex (SHIFT_ON / SHIFT_OFF); el CC 119 solo lo define Ableton
-    _boton("SHIFT", 119, vdj=None, dj="ambos",
-           por_que="modificador en los dos programas: Ableton lo sigue también en modo DJ (SHIFT + STOP, TEMPO, MACRO)"),
+    _boton("SHIFT", 119, vdj=None, dj="ambos", reposo="ableton",
+           por_que="modificador en los dos programas: Ableton lo sigue también en modo DJ (SHIFT + STOP, TEMPO, MACRO)"
+                   " y en reposo (SHIFT + MACRO)"),
 
     # Tocar las perillas (canal 2) y las perillas (V-Pots MCU, canal 1)
     *(_boton(f"KNOB{n}_TOUCH", 9 + n, ableton=f"knob_touch_buttons[{n - 1}]") for n in range(1, 9)),

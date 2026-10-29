@@ -3,8 +3,8 @@
 Qué revisa:
   1. VirtualDJ/Devices/MaschineMK3-VDJ.xml: cada control con el mismo número, canal y nombre que el contrato.
   2. Ableton/CustomMaschineMK3/ControlElements.py: lo mismo con los elementos del script.
-  3. Las constantes de CustomMaschineMK3.py: que cada (0xB1, n) sea un control del contrato, y que los dueños del
-     contrato coincidan con lo que hace _accept_midi en cada modo (ver _ableton_reacciona).
+  3. El script de Ableton: que cada (0xB1, n) de sus constantes sea un control del contrato, y que los dueños
+     del contrato coincidan con lo que hace MidiRouter.py (el ruteo de verdad) en cada modo.
   4. Pantallas/prototipo/mode.py: los botones que cambian el modo.
   5. El mapeo de VirtualDJ: evalúa cada acción en cada modo ($vdj, $pads, $padlock) y avisa si VirtualDJ hace algo
      con un control que el contrato le da solo a Ableton, o si prende una luz que Ableton también maneja.
@@ -20,6 +20,7 @@ Sale con código 1 si hay errores.
 
 import argparse
 import ast
+import importlib.util
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -28,6 +29,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RAIZ))
 from contrato.controles import CONTROLES, DUENOS, MODOS, PANTALLA_COMPARTIDA, POR_NOMBRE  # noqa: E402
+from vdjscript import Analizador, acciones, condicion  # noqa: E402
 
 DEVICE = RAIZ / "VirtualDJ" / "Devices" / "MaschineMK3-VDJ.xml"
 MAPPER = RAIZ / "VirtualDJ" / "Mappers" / "MASCHINEMK3VDJ - Mapeo Personalizado.xml"
@@ -208,11 +210,20 @@ def revisar_elementos(informe, elementos):
                       f"y el contrato no lo nombra")
 
 
-# --- 3. Constantes del script y lo que hace _accept_midi -------------------------------------------------------
+# --- 3. Constantes y ruteo del script de Ableton ---------------------------------------------------------------
 
-def leer_constantes():
+def cargar_router():
+    """MidiRouter.py (el ruteo de verdad del script): no importa nada de Live, así que se carga suelto."""
+    spec = importlib.util.spec_from_file_location("MidiRouter", SCRIPT / "MidiRouter.py")
+    modulo = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(modulo)
+    return modulo
+
+
+def leer_constantes(router):
+    """Las constantes de MidiRouter.py y las de CustomMaschineMK3.py (estas sin Live: se leen del texto)."""
+    constantes = {nombre: valor for nombre, valor in vars(router).items() if nombre.isupper()}
     arbol = ast.parse((SCRIPT / "CustomMaschineMK3.py").read_text(encoding="utf-8"))
-    constantes = {}
     for nodo in arbol.body:
         if isinstance(nodo, ast.Assign) and len(nodo.targets) == 1 and isinstance(nodo.targets[0], ast.Name):
             nombre = nodo.targets[0].id
@@ -239,47 +250,83 @@ def _claves(valor):
     return []
 
 
-def _ableton_reacciona(c):
-    """Lo que hace _accept_midi (CustomMaschineMK3.py) en cada modo, armado con sus constantes.
-    Si cambia _accept_midi, esto se tiene que actualizar a mano: la fase 3 lo reemplaza por el ruteo de verdad."""
-    solo_vdj = {("nota", nota, c["VDJ_ONLY_CHANNEL"] + 1) for nota in c["VDJ_ONLY_NOTES"]}
-    zona_pads = ({("nota", nota, 1) for nota in c["PAD_NOTES"]} | {("pitch", None, 1), ("pitch", None, 2)}
-                 | {_cc2(cc) for cc in c["GROUP_BUTTON_CCS"]} | set(_claves(c["PAD_PAGE_BUTTONS"])))
-    lock = _cc2(c["PAD_LOCK_BUTTON"][1])
-    # En modo DJ: los de Ableton siempre, el modo del encoder, los que salen, y los casos con condición de _accept_midi:
-    # SHIFT (se sigue arriba de todo), SHIFT + CHANNEL (reposo), SHIFT + MACRO, TEMPO (y el encoder en modo TEMPO), LOCK
-    en_dj = (set(_claves(c["ABLETON_ALWAYS_BUTTONS"])) | set(_claves(c["SHARED_ENCODER_MODE_BUTTONS"]))
-             | set(_claves(c["VDJ_EXIT_BUTTONS"])) | set(_claves([c["SESSION_VIEW_BUTTON"], c["VDJ_ENTER_BUTTON"],
-                                                                   c["SHIFT_BUTTON"], c["STANDBY_BUTTON"],
-                                                                   c["MACRO_BUTTON"], c["TEMPO_BUTTON"],
-                                                                   c["ENCODER_TURN_BUTTON"]])) | {lock})
-    en_reposo = set(_claves(c["STANDBY_WAKE_BUTTONS"])) | set(_claves([c["VDJ_ENTER_BUTTON"]]))
-    todos = {direccion(control) for control in CONTROLES}
-    return {
-        "ableton": todos - solo_vdj,
-        "lock": (todos - solo_vdj - zona_pads) | {lock},
-        "dj": en_dj,
-        "reposo": en_reposo,
-    }, zona_pads | {lock}
+class EntornoPrueba:
+    """Lo que el router le pregunta a Live: nada apretado, vista mixer, salvo lo que se pida."""
+
+    def __init__(self, shift=False, tempo=False, **otros):
+        self.shift_pressed = shift
+        self.solo_pressed = self.erase_pressed = self.mute_pressed = False
+        self.macro_pressed = self.plugin_pressed = False
+        self.encoder_tempo_mode = tempo
+        self.display_mode = "default"
+        self.encoder_mode = "tempo" if tempo else "default"
+        for nombre, valor in otros.items():
+            setattr(self, nombre, valor)
 
 
-def _luces_de_ableton(c, zona_pads_y_lock):
-    """Qué luces manda el script en cada modo (_do_send_midi)."""
-    solo_vdj = {("nota", nota, c["VDJ_ONLY_CHANNEL"] + 1) for nota in c["VDJ_ONLY_NOTES"]}
-    todas = {direccion(control) for control in CONTROLES} | {"pantalla"}
-    return {
-        "ableton": todas - solo_vdj,
-        "lock": todas - solo_vdj - zona_pads_y_lock,
-        "dj": set(_claves(c["ABLETON_ALWAYS_BUTTONS"])),
-        "reposo": set(),
-    }
+ESTADO_DEL_MODO = {"ableton": {}, "lock": {"pad_lock": True}, "dj": {"vdj_mode": True}, "reposo": {"standby": True}}
+# Modificadores del router y en qué modos los usa: apretar uno ahí cuenta como que Ableton reacciona, aunque solo no
+# haga nada (cambia lo que hacen los demás botones). SCENE se sigue en todos los modos pero solo sirve en Ableton
+MODIFICADORES = {"shift_down": MODOS, "follow_held": MODOS, "restart_held": MODOS, "scene_down": ("ableton", "lock")}
+
+
+def router_en(router_mod, modo):
+    router = router_mod.MidiRouter(standby=False)
+    for atributo, valor in ESTADO_DEL_MODO[modo].items():
+        setattr(router, atributo, valor)
+    return router
+
+
+def mensaje(control, valor=127):
+    """El mensaje MIDI de apretar (o girar, en las perillas) un control del contrato."""
+    canal = control.canal - 1
+    if control.tipo == "pitch":
+        return (0xE0 | canal, 0x00, 0x40)
+    if control.tipo == "nota":
+        return (0x90 | canal, control.numero, valor)
+    return (0xB0 | canal, control.numero, 1 if control.nombre.startswith("KNOB") and canal == 0 else valor)
+
+
+def ableton_reacciona(router_mod, control, modo):
+    """"efecto" si el script hace algo con el control en ese modo (lo deja pasar a Live, cambia de modo o hace algo
+    que se ve o se oye), "estado" si solo lo sigue para no perder el hilo, None si lo ignora. Se prueba sin nada
+    apretado, con SHIFT y con el encoder en TEMPO."""
+    resultado = None
+    for shift, tempo in ((False, False), (True, False), (False, True)):
+        router = router_en(router_mod, modo)
+        router.shift_down = shift
+        antes = (router.standby, router.vdj_mode, router.pad_lock)
+        modificadores = {nombre: getattr(router, nombre) for nombre, modos in MODIFICADORES.items() if modo in modos}
+        efectos = []
+        pasa = router.accept(mensaje(control), EntornoPrueba(shift, tempo), lambda nombre, *a: efectos.append(nombre))
+        if pasa or antes != (router.standby, router.vdj_mode, router.pad_lock):
+            return "efecto"
+        if any(getattr(router, nombre) != valor for nombre, valor in modificadores.items()):
+            return "efecto"
+        if any(nombre not in router_mod.STATE_ONLY_EFFECTS for nombre in efectos):
+            return "efecto"
+        if any(nombre != "_log" for nombre in efectos):
+            resultado = "estado"
+    return resultado
+
+
+def luces_de_ableton(router_mod):
+    """Qué direcciones (y la pantalla) deja salir el router en cada modo."""
+    pantalla = (0xF0, 0x00, 0x00, 0x66, 0x17, 0x12, 0x00, 0x20, 0xF7)
+    luces = {}
+    for modo in MODOS:
+        router = router_en(router_mod, modo)
+        luces[modo] = {direccion(control) for control in CONTROLES if router.lets_out(mensaje(control))}
+        if router.lets_out(pantalla):
+            luces[modo].add("pantalla")
+    return luces
 
 
 def revisar_constantes(informe, c):
     for nombre, valor in c.items():
         for clave in _claves(valor):
             if clave not in POR_DIRECCION:
-                informe.error(f"CustomMaschineMK3.py: {nombre} usa {nombre_direccion(clave)}, que no está en el contrato")
+                informe.error(f"Script de Ableton: {nombre} usa {nombre_direccion(clave)}, que no está en el contrato")
     for numero, nombre in c.get("BUTTON_NAMES", {}).items():
         control = POR_DIRECCION.get(_cc2(numero))
         if control is None:
@@ -288,8 +335,19 @@ def revisar_constantes(informe, c):
             informe.aviso(f"BUTTON_NAMES: CC {numero} se llama '{nombre}' en el script y {control.nombre} en el contrato")
 
 
-def revisar_duenos_ableton(informe, reacciona):
+def revisar_efectos(informe):
+    """Cada efecto que pide el router (run("nombre", ...)) tiene que ser un método del script: si no, falla recién en
+    Live, al apretar ese botón."""
+    router = (SCRIPT / "MidiRouter.py").read_text(encoding="utf-8")
+    metodos = set(re.findall(r"^    def (\w+)\(", (SCRIPT / "CustomMaschineMK3.py").read_text(encoding="utf-8"), re.M))
+    for nombre in sorted(set(re.findall(r'run\("(\w+)"', router)) - metodos):
+        informe.error(f"MidiRouter.py pide el efecto '{nombre}' y CustomMaschineMK3.py no tiene ese método")
+
+
+def revisar_duenos_ableton(informe, router_mod):
+    de_oido = []
     for control in CONTROLES:
+        modos_de_oido = []
         for modo in MODOS:
             dueno = control.dueno(modo)
             if dueno not in DUENOS:
@@ -298,13 +356,19 @@ def revisar_duenos_ableton(informe, reacciona):
             if dueno == "ambos" and not control.por_que:
                 informe.error(f"{control.nombre}: es de los dos en modo {modo} y no dice por qué")
             ableton_dice = dueno in ("ableton", "ambos")
-            ableton_hace = direccion(control) in reacciona[modo]
-            if ableton_dice and not ableton_hace:
+            hace = ableton_reacciona(router_mod, control, modo)
+            if ableton_dice and hace != "efecto":
                 informe.error(f"{control.nombre}: el contrato dice que Ableton reacciona en modo {modo} "
-                              f"({dueno}), y _accept_midi lo descarta")
-            elif ableton_hace and not ableton_dice:
-                informe.error(f"{control.nombre}: _accept_midi lo deja pasar en modo {modo}, "
-                              f"y el contrato dice '{dueno}'")
+                              f"({dueno}), y MidiRouter lo descarta")
+            elif hace == "efecto" and not ableton_dice:
+                informe.error(f"{control.nombre}: MidiRouter reacciona en modo {modo}, y el contrato dice '{dueno}'")
+            elif hace == "estado" and not ableton_dice:
+                modos_de_oido.append(modo)
+        if modos_de_oido:
+            de_oido.append(f"{control.nombre} ({', '.join(modos_de_oido)})")
+    if de_oido:
+        informe.nota(f"El script de Ableton sigue {len(de_oido)} controles sin hacer nada que se vea (seguimiento de "
+                     f"oído): " + ", ".join(de_oido))
 
 
 # --- 4. mode.py de las pantallas -------------------------------------------------------------------------------
@@ -339,119 +403,6 @@ def revisar_mode_py(informe):
 
 
 # --- 5. Mapeo de VirtualDJ -------------------------------------------------------------------------------------
-
-def tokenizar(texto):
-    tokens, i = [], 0
-    while i < len(texto):
-        caracter = texto[i]
-        if caracter.isspace():
-            i += 1
-        elif caracter in "()&?:":
-            tokens.append(caracter)
-            i += 1
-        elif caracter in "'\"`":
-            fin = texto.find(caracter, i + 1)
-            fin = len(texto) - 1 if fin < 0 else fin
-            tokens.append(texto[i:fin + 1])
-            i = fin + 1
-        else:
-            fin = i
-            while fin < len(texto) and not texto[fin].isspace() and texto[fin] not in "()&?:'\"`":
-                fin += 1
-            tokens.append(texto[i:fin])
-            i = fin
-    return tokens
-
-
-class Analizador:
-    """VDJScript: a & b encadena; c ? x : y elige. El ? toma la acción de su izquierda (x & c ? y : z = x & (c ? y : z))
-    y la rama del : es un solo término. Si VirtualDJ agrupara distinto, se verían de más acciones, no de menos."""
-
-    def __init__(self, texto):
-        self.tokens, self.i = tokenizar(texto), 0
-
-    def ver(self):
-        return self.tokens[self.i] if self.i < len(self.tokens) else None
-
-    def tomar(self):
-        token = self.ver()
-        self.i += 1
-        return token
-
-    def secuencia(self):
-        items = [self.termino()]
-        while self.ver() == "&":
-            self.tomar()
-            items.append(self.termino())
-        return items[0] if len(items) == 1 else ("sec", items)
-
-    def termino(self):
-        primario = self.primario()
-        if self.ver() != "?":
-            return primario
-        self.tomar()
-        entonces = self.secuencia()
-        sino = ("atomo", ["nothing"])
-        if self.ver() == ":":
-            self.tomar()
-            sino = self.termino()
-        return ("si", primario, entonces, sino)
-
-    def primario(self):
-        if self.ver() == "(":
-            self.tomar()
-            interno = self.secuencia()
-            if self.ver() == ")":
-                self.tomar()
-            return interno
-        palabras = []
-        while self.ver() not in (None, "&", "?", ":", "(", ")"):
-            palabras.append(self.tomar())
-        return ("atomo", palabras)
-
-
-def condicion(nodo, entorno):
-    """True / False / None (no se sabe sin VirtualDJ corriendo)."""
-    if nodo[0] == "atomo":
-        palabras = nodo[1]
-        if palabras == ["true"]:
-            return True
-        if palabras == ["false"]:
-            return False
-        if len(palabras) in (2, 3) and palabras[0] == "var":
-            variable = palabras[1].strip("'")
-            if variable not in entorno:
-                return None
-            if len(palabras) == 2:
-                return entorno[variable] != 0
-            try:
-                return entorno[variable] == float(palabras[2])
-            except ValueError:
-                return None
-        return None
-    if nodo[0] == "si":
-        cumple = condicion(nodo[1], entorno)
-        if cumple is True:
-            return condicion(nodo[2], entorno)
-        if cumple is False:
-            return condicion(nodo[3], entorno)
-        a, b = condicion(nodo[2], entorno), condicion(nodo[3], entorno)
-        return a if a == b else None
-    return None
-
-
-def acciones(nodo, entorno):
-    if nodo[0] == "atomo":
-        return [nodo[1]] if nodo[1] else []
-    if nodo[0] == "sec":
-        return [accion for item in nodo[1] for accion in acciones(item, entorno)]
-    cumple = condicion(nodo[1], entorno)
-    if cumple is True:
-        return acciones(nodo[2], entorno)
-    if cumple is False:
-        return acciones(nodo[3], entorno)
-    return acciones(nodo[2], entorno) + acciones(nodo[3], entorno)
-
 
 def leer_mapper():
     return [(mapa.get("value"), mapa.get("action")) for mapa in ET.parse(MAPPER).getroot() if mapa.tag == "map"]
@@ -587,12 +538,12 @@ def main():
     entradas, salidas = leer_device()
     revisar_device(informe, entradas)
     revisar_elementos(informe, leer_elementos())
-    constantes = leer_constantes()
-    revisar_constantes(informe, constantes)
-    reacciona, zona_pads_y_lock = _ableton_reacciona(constantes)
-    revisar_duenos_ableton(informe, reacciona)
+    router = cargar_router()
+    revisar_constantes(informe, leer_constantes(router))
+    revisar_duenos_ableton(informe, router)
+    revisar_efectos(informe)
     revisar_mode_py(informe)
-    revisar_mapper(informe, entradas, salidas, _luces_de_ableton(constantes, zona_pads_y_lock))
+    revisar_mapper(informe, entradas, salidas, luces_de_ableton(router))
     revisar_protocolo(informe, args.arreglar)
 
     if args.tabla:

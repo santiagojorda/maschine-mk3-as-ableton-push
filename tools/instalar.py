@@ -1,15 +1,15 @@
 """Instala el script de Ableton y el mapeo de VirtualDJ desde el repo (o desde cualquier rama) en un solo paso.
 
 Antes de copiar:
-  - corre tools/validar_contrato.py y no instala si hay errores (--sin-validar lo saltea; con --ref no se valida,
-    porque el validador mira la carpeta del repo y no esa rama);
+  - corre tools/validar_contrato.py y los tests (tests/) y no instala si algo falla (--sin-validar lo saltea; con
+    --ref no se valida, porque los dos miran la carpeta del repo y no esa rama);
   - guarda lo que está instalado en %LOCALAPPDATA%\\MaschineMK3AsPush\\respaldos\\<fecha>, para volver con --restaurar.
 
 Destinos:
   - Ableton: cada C:\\ProgramData\\Ableton\\*\\Resources\\MIDI Remote Scripts\\Maschine_as_Push que exista (los .py;
     settings.json y el .log de esa carpeta no se tocan)
   - VirtualDJ: %LOCALAPPDATA%\\VirtualDJ\\Devices y \\Mappers
-Las pantallas no: corren desde maschine-mk3-driver\\dist (construir_exe.bat).
+Las pantallas no: corren desde Pantallas\\dist (Pantallas\\construir_exe.bat).
 
 Uso:  python tools/instalar.py --simular          muestra qué haría, sin copiar nada
       python tools/instalar.py                    instala lo que está en la carpeta del repo (la rama actual)
@@ -86,8 +86,9 @@ def respaldar(pasos):
 
 
 def validar():
-    resultado = subprocess.run([sys.executable, str(RAIZ / "tools" / "validar_contrato.py")])
-    return resultado.returncode == 0
+    contrato = subprocess.run([sys.executable, str(RAIZ / "tools" / "validar_contrato.py")])
+    tests = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", str(RAIZ / "tests")])
+    return contrato.returncode == 0 and tests.returncode == 0
 
 
 def restaurar(simular):
@@ -120,7 +121,7 @@ def main():
         print(f"No encontré ninguna carpeta {NOMBRE_INSTALADO} en C:\\ProgramData\\Ableton")
         return 1
     if args.ref is None and not args.sin_validar and not validar():
-        print("El contrato tiene errores: no instalo (--sin-validar para instalar igual)")
+        print("El contrato o los tests fallan: no instalo (--sin-validar para instalar igual)")
         return 1
 
     origen = f"la rama {args.ref}" if args.ref else f"la carpeta del repo ({_git('branch', '--show-current').decode().strip()})"

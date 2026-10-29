@@ -98,69 +98,26 @@ from .PageableBackgroundComponent import PageableBackgroundComponent
 from .Logger import logger
 from . import Config
 from . import Protocolo
+from .MidiRouter import (
+    ENCODER_TEMPO_MODE, GROUP_BUTTON_CCS, KNOB_COUNT, LINK_BUTTON, MIXER_DISPLAY_MODE, PAD_NOTES, PAD_PAGE_BUTTONS,
+    SESSION_DISPLAY_MODE, SESSION_NAV_PUSH, SESSION_NAV_TILTS, SESSION_NAV_TURN, SESSION_VIEW_BUTTON, MidiRouter
+)
 
-# VirtualDJ mode: "SAMPLING" hands the Maschine over to VirtualDJ, "PLUGIN" or "MIXER" brings it back.
-# (status byte, CC number) of each button, all of them on MIDI channel 2
-VDJ_ENTER_BUTTON = (0xB1, 39)
-# Standby: SHIFT + CHANNEL puts the Maschine to rest (everything off, welcome on the screens); CHANNEL wakes it,
-# and so do the mode buttons (SAMPLING also enters VirtualDJ mode, MIXER and PLUGIN select their view)
-BUTTON_NAMES = {
-    8: "EncoderPush", 30: "EncoderUp", 31: "EncoderRight", 32: "EncoderDown", 33: "EncoderLeft", 34: "Channel",
-    35: "Plugin", 36: "Arranger", 37: "Mixer", 38: "Browser", 39: "Sampling", 40: "File", 41: "Setting", 42: "Auto",
-    43: "Macro", 44: "Volume", 45: "Swing", 46: "NoteRep", 47: "Tempo", 48: "Lock", 49: "Pitch", 50: "Mod",
-    51: "Perform", 52: "Notes", 53: "Restart", 54: "Erase", 55: "Tap", 56: "Follow", 57: "Play", 58: "Rec",
-    59: "Stop", 80: "FixedVel", 81: "PadMode", 82: "Keyboard", 83: "Chords", 84: "Step", 85: "Scene",
-    86: "Pattern", 87: "Events", 88: "Variation", 89: "Duplicate", 90: "Select", 91: "Solo", 92: "Mute",
-    100: "GroupA", 101: "GroupB", 102: "GroupC", 103: "GroupD", 104: "GroupE", 105: "GroupF", 106: "GroupG",
-    107: "GroupH", 110: "Left", 111: "Right",
-}
-LEFT_BUTTON = (0xB1, 110)
-RIGHT_BUTTON = (0xB1, 111)
-STANDBY_BUTTON = (0xB1, 34)
-SHIFT_BUTTON = (0xB1, 119)
-# SHIFT + MACRO asks the screens' supervisor (the driver) to restart the screens, in case they freeze or draw garbage
-MACRO_BUTTON = (0xB1, 43)
+# The MIDI routing (which program gets each message, the modes, the modifier combinations) and its button constants
+# live in MidiRouter.py, which runs without Live and is tested in tests/
 SCREENS_SUPERVISOR_ADDRESS = (Protocolo.HOST, Protocolo.SUPERVISOR_PORT)
-# TEMPO mode of the encoder: turning moves the tempo in whole BPM (90.09 -> 91.00 up, 89.00 down; with SHIFT it stays
-# fine), and SHIFT + TEMPO, in any view, sets it to the tempo of the VirtualDJ deck the driver picks as reference
-# without changing the view. The driver (vdj_master.py) sends it here by UDP twice a second
-ENCODER_TEMPO_MODE = "tempo"
-ENCODER_TURN_BUTTON = (0xB1, 7)
-TEMPO_BUTTON = (0xB1, 47)
-# SCENE + click of the encoder launches the scene under the cursor (all its clips). PATTERN captures the clips that are
-# playing into a new scene, like Push's "capture and insert scene" (it used to be the fixed length recording button)
-SCENE_BUTTON = (0xB1, 85)
-PATTERN_BUTTON = (0xB1, 86)
 VDJ_TEMPO_ADDRESS = (Protocolo.HOST, Protocolo.VDJ_TEMPO_PORT)
 TEMPO_FLASH_SECONDS = 3.0  # how long SHIFT + TEMPO shows the tempo view when it wasn't the one on screen
 VDJ_TEMPO_MAX_AGE = 3.0  # seconds: older than this, the driver isn't sending (closed) and the number can't be trusted
 TEMPO_RANGE = (20.0, 999.0)  # Live's own limits
-STANDBY_WAKE_BUTTONS = ((0xB1, 34), (0xB1, 35), (0xB1, 36), (0xB1, 37))
 # Only the controllers that are LEDs: sending a value to all 128 also hits MIDI's special messages
 # (CC 120-127 channel mode, RPN / NRPN, bank select...) and can leave the Maschine in an odd state
 STANDBY_LED_CCS = (34, 35, 36, 37, 38, 39, 40, 41, 42, 44, 45, 47, 48, 49, 52, 53, 55, 56, 57, 58, 59, 80, 81, 82, 83, 84, 87, 88, 100, 101, 102, 103, 104, 105, 106, 107, 110, 111)
 STANDBY_LED_NOTES = range(4)  # buttons 1-4 above the screens (channel 2)
-VDJ_EXIT_BUTTONS = ((0xB1, 35), (0xB1, 36), (0xB1, 37))
-# Buttons that keep controlling Ableton even in VirtualDJ mode: PLAY, STOP, TAP (messages and their LEDs).
-# SHIFT (sysex from the MK3 / Plus) also gets through, so SHIFT + STOP and SHIFT + TAP (metronome) work too.
-ABLETON_ALWAYS_BUTTONS = ((0xB1, 57), (0xB1, 59), (0xB1, 55))
-SHIFT_SYSEX_PREFIX = (0xF0, 0x00, 0x21, 0x09)
-# VOLUME / SWING / TEMPO (encoder = master / cue volume / tempo) are shared with VirtualDJ: in VirtualDJ mode Ableton still follows
-# their presses (without LEDs) so the encoder mode stays the same in both programs
-SHARED_ENCODER_MODE_BUTTONS = ((0xB1, 44), (0xB1, 45), (0xB1, 47))  # VOLUME, SWING, TEMPO (mutually exclusive)
-# "FOLLOW" toggles Ableton's Link in Ableton (replaces its record quantize function).
-# In VirtualDJ mode it belongs to VirtualDJ (its Ableton Link effect) and its LED too.
-LINK_BUTTON = (0xB1, 56)
 PAD_LOCK_MODE = "vdj_locked"
 # Ticks (about 100ms each) to wait before the full LEDs and display refresh after leaving VirtualDJ mode,
 # so VirtualDJ's last messages don't overwrite Ableton's state. The display itself is redrawn immediately too.
 VDJ_REFRESH_DELAY = 1
-# "LOCK" pressed in VirtualDJ mode keeps the pads with VirtualDJ after going back to Ableton ("pad lock").
-# Pressing "LOCK" in Ableton releases them. VirtualDJ's mapping mirrors the same logic.
-PAD_LOCK_BUTTON = (0xB1, 48)
-# Locked to VirtualDJ along with the pads: the A-H group buttons and the touch strip (VirtualDJ's crossfader)
-GROUP_BUTTON_CCS = range(100, 108)
-PAD_NOTES = range(60, 76)
 # Screen bridge: the Pantallas program drives the Maschine's screens (NI's software can't), so every display line
 # the script sends also goes to it over UDP on localhost. The last lines are resent every second,
 # so the bridge gets the text even when it starts after Live.
@@ -175,32 +132,6 @@ SCREEN_BRIDGE_MODE_VDJ = json.dumps({"v": Protocolo.VERSION, "type": Protocolo.T
 SCREEN_BRIDGE_INTERVAL_MS = 50
 SCREEN_BRIDGE_STALL_SECONDS = 0.5
 SCREEN_BRIDGE_RESEND_TICKS = 20  # display lines are resent about once per second (at 20 FPS)
-KNOB_COUNT = 8
-# Knob touch (CC 10-17, MIDI channel 2). MUTE + touching a knob in the mixer sends its parameter to zero
-# (pan to center); doing it again restores the previous value
-KNOB_TOUCH_CCS = tuple((0xB1, 10 + index) for index in range(KNOB_COUNT))
-# RESTART + touching a knob sets it to its default value; RESTART alone still toggles the loop, on release
-RESTART_BUTTON = (0xB1, 53)
-SOLO_BUTTON = (0xB1, 91)
-# EVENTS: a new scene under the cursor's, the cursor's clip stopped, the cursor moved there (in every view; its old
-# note selection / erase functions are gone)
-NEW_SCENE_BUTTON = (0xB1, 87)
-ERASE_DOUBLE_TOUCH_SECONDS = 0.4
-MIXER_DISPLAY_MODE = "default"
-# ARRANGER shows Live's Session view and the clip grid on the Maschine's screens (both screens: 4 tracks each);
-# it stays on until another view button (VIEW_BUTTONS) is pressed. Its LED shows it.
-SESSION_VIEW_BUTTON = (0xB1, 36)
-SESSION_DISPLAY_MODE = "session"
-# VARIATION (NAVIGATE) deletes a clip, for a bad take (Live's undo brings it back): in the session view the one under
-# the cursor, in the other views the last clip recorded
-DELETE_CLIP_BUTTON = (0xB1, 88)
-# Session view, encoder in its default mode (like Push): turning or tilting up / down moves the selected clip slot
-# one scene, tilting left / right one track, always inside the grid on the screens (it doesn't move);
-# with SHIFT they move the grid instead; pushing fires the selected clip slot
-SESSION_NAV_TURN = (0xB1, 7)
-SESSION_NAV_PUSH = (0xB1, 8)
-SESSION_NAV_TILTS = {(0xB1, 30): (0, -1), (0xB1, 31): (1, 0), (0xB1, 32): (0, 1), (0xB1, 33): (-1, 0)}  # (track, scene)
-ENCODER_DEFAULT_MODE = "default"
 SESSION_GRID_TRACKS = 8
 SESSION_GRID_SCENES = 4
 RECORDED_CHECK_SECONDS = 0.1  # how often the tracks are looked at for a recording that started or ended
@@ -208,17 +139,6 @@ SESSION_GRID_STEP = 4  # the grid on the screens moves sideways in steps of 4 tr
 BROWSER_DISPLAY_MODE = "browser"
 BROWSER_BRIDGE_ITEMS = 12  # items sent on each side of the selected one
 TEMPO_SCREEN_RANGE = (60.0, 200.0)  # BPM range of the tempo bar on the screens
-# PAD MODE, KEYBOARD, CHORDS and STEP select VirtualDJ's pad page, so they follow the pads while locked
-PAD_PAGE_BUTTONS = ((0xB1, 81), (0xB1, 82), (0xB1, 83), (0xB1, 84))
-# Buttons 1-4 above the screen (notes 0-3, channel 2) belong to VirtualDJ only (stems KICK / HATS of each deck):
-# Ableton never uses them, in any mode, and never drives their LEDs
-VDJ_ONLY_CHANNEL = 1
-# CHANNEL, PLUGIN, ARRANGER, MIXER, BROWSER, SAMPLING, FILE, SETTINGS: any view button turns VOLUME / SWING / TEMPO
-# off, in Ableton and in VirtualDJ mode (the VirtualDJ mapping does the same with its own encoder mode)
-VIEW_BUTTONS = tuple((0xB1, cc) for cc in range(34, 42))
-VDJ_ONLY_NOTES = range(0, 4)
-# PITCH, MOD, PERFORM: NOTES (note repeat rate selector on the group buttons) turns off when one of them is pressed
-TOUCHSTRIP_MODE_BUTTONS = ((0xB1, 49), (0xB1, 50), (0xB1, 51))
 
 def _track_flag(track, name):
     # Live raises RuntimeError (not AttributeError) for mute / solo on the Main track, so getattr's default is not enough
@@ -226,6 +146,23 @@ def _track_flag(track, name):
         return bool(getattr(track, name))
     except Exception:
         return False
+
+class _RouterEnvironment:
+    """What MidiRouter reads from Live, only when a rule needs it (most messages need none of it)."""
+
+    def __init__(self, surface):
+        self._surface = surface
+
+    shift_pressed = property(lambda self: self._surface.elements.shift.is_pressed)
+    solo_pressed = property(lambda self: self._surface.elements.solo.is_pressed)
+    erase_pressed = property(lambda self: self._surface.elements.erase.is_pressed)
+    mute_pressed = property(lambda self: self._surface.elements.mute.is_pressed)
+    macro_pressed = property(lambda self: self._surface.elements.macro.is_pressed)
+    plugin_pressed = property(lambda self: self._surface.elements.plugin.is_pressed)
+    encoder_tempo_mode = property(lambda self: self._surface._encoder_tempo_mode())
+    display_mode = property(lambda self: self._surface.component_map["Display_Modes"].selected_mode)
+    encoder_mode = property(lambda self: self._surface.component_map["Encoder_Modes"].selected_mode)
+
 
 class CustomTargetTrackComponent(TargetTrackComponent):
         
@@ -331,11 +268,8 @@ class CustomMaschineMK3(ControlSurface):
     _current_sliced_simpler = None
     _display_mode = None
     _settings = None
-    _vdj_mode = False
-    _standby = Config.START_IN_STANDBY
-    _shift_down = False
-    _pad_lock = False
-    _swallow_lock_release = False
+    _router = None
+    _router_environment = None
     _pad_mode_before_lock = None
     _screen_bridge = None
     _screen_bridge_lines = None
@@ -348,13 +282,6 @@ class CustomMaschineMK3(ControlSurface):
     _screen_bridge_timer_ok = False
     _screen_bridge_timer_repeats = False
     _screen_bridge_stall_logged = False
-    _restart_held = False
-    _restart_used = False
-    _follow_held = False
-    _follow_used = False
-    _swallow_tempo_release = False
-    _scene_down = False
-    _erase_touch = (None, 0.0)  # (knob index, time) of the last ERASE + knob touch
     _browser_bridge_key = None  # browser folder whose items are cached for the screens
     _browser_bridge_items = ()
     _browser_bridge_parent = None
@@ -370,6 +297,9 @@ class CustomMaschineMK3(ControlSurface):
     def __init__(self, *a, **k):
         # Settings must be loaded before initialization
         self._settings = SettingsRepository()
+        # The router decides what LEDs may be sent, and the framework sends some while it initializes
+        self._router = MidiRouter(standby = Config.START_IN_STANDBY)
+        self._router_environment = _RouterEnvironment(self)
         # The display is drawn during initialization, so the bridge must exist before it
         self._init_screen_bridge()
         self._init_specification()
@@ -422,19 +352,8 @@ class CustomMaschineMK3(ControlSurface):
             self.refresh_state()
 
     def _do_send_midi(self, midi_event_bytes):
-        # Standby: nothing reaches the Maschine's LEDs or display (_blank_hardware writes its own zeros)
-        if self._standby:
-            return True
-        # FOLLOW's LED shows Ableton Link (sent by _update_link_led only)
-        if tuple(midi_event_bytes[:2]) == LINK_BUTTON:
-            return True
-        # VirtualDJ owns LEDs and display while VirtualDJ mode is active, except Ableton's own transport buttons
-        if self._vdj_mode and tuple(midi_event_bytes[:2]) not in ABLETON_ALWAYS_BUTTONS:
-            return True
-        if self._is_vdj_only(midi_event_bytes):
-            return True
-        # Pads locked to VirtualDJ keep VirtualDJ's colors, page button LEDs and the lit LOCK button
-        if self._pad_lock and self._is_pad_section(midi_event_bytes, include_lock = True):
+        # Standby, VirtualDJ mode, the pad lock and the VirtualDJ-only buttons keep the script's LEDs and display away
+        if not self._router.lets_out(midi_event_bytes):
             return True
         logger.debug(f"_do_send_midi {midi_event_bytes}")
         super()._do_send_midi(midi_event_bytes)
@@ -457,229 +376,31 @@ class CustomMaschineMK3(ControlSurface):
             super().receive_midi_chunk(accepted)
 
     def _accept_midi(self, midi_bytes):
-        midi_bytes = tuple(midi_bytes)
-        if self._is_vdj_only(midi_bytes):
-            return False
-        is_cc = len(midi_bytes) == 3
-        # SHIFT's state, tracked here as well: SHIFT + CHANNEL must not depend on the framework having seen it
-        if midi_bytes[:4] == SHIFT_SYSEX_PREFIX and len(midi_bytes) > 12:
-            self._shift_down = midi_bytes[-2] > 0
-        elif is_cc and midi_bytes[:2] == SHIFT_BUTTON:
-            self._shift_down = midi_bytes[2] > 0
-        elif is_cc and midi_bytes[:2] == SCENE_BUTTON:
-            self._scene_down = midi_bytes[2] > 0  # tracked here too; SCENE still reaches the framework (SCENE + pad)
-        if is_cc and midi_bytes[0] == 0xB1 and midi_bytes[2] > 0 and midi_bytes[1] in BUTTON_NAMES:
-            self._log(f"button {BUTTON_NAMES[midi_bytes[1]]} pressed (shift = {self._shift_down}, "
-                      f"standby = {self._standby}, vdj = {self._vdj_mode})")
-        if is_cc and not self._vdj_mode and not self._standby:
-            if midi_bytes[:2] == SESSION_NAV_PUSH and self._scene_down:
-                if midi_bytes[2] > 0:
-                    self._launch_cursor_scene()
-                return False
-            if midi_bytes[:2] == PATTERN_BUTTON:
-                if midi_bytes[2] > 0:
-                    self._capture_scene()
-                return False
-        if is_cc and not self._standby:
-            # Also in VirtualDJ mode: the tempo view opened from there controls Ableton's tempo the same way
-            # (VirtualDJ's mapping ignores the encoder in its encoder mode 3 and the driver draws the view)
-            if (midi_bytes[:2] == ENCODER_TURN_BUTTON and not self._shift_down and self._encoder_tempo_mode()):
-                self._turn_tempo(midi_bytes[2])
-                return False
-            if midi_bytes[:2] == TEMPO_BUTTON:
-                if midi_bytes[2] > 0 and self._shift_down:
-                    # SHIFT + TEMPO: sync with VirtualDJ, in any view, leaving the view as it is; the press never
-                    # reaches the encoder mode component, which would toggle the tempo view
-                    self._swallow_tempo_release = True
-                    self._sync_tempo_with_virtualdj()
-                    return False
-                if midi_bytes[2] == 0 and self._swallow_tempo_release:
-                    self._swallow_tempo_release = False
-                    return False
-        if is_cc and midi_bytes[:2] == MACRO_BUTTON and midi_bytes[2] > 0 and self._shift_down:
-            self._restart_screens()
-            return False
-        if self._standby:
-            # Everything is ignored, except SHIFT's state and the buttons that wake the Maschine
-            if midi_bytes[:4] == SHIFT_SYSEX_PREFIX:
-                return True
-            if is_cc and midi_bytes[2] > 0:
-                key = midi_bytes[:2]
-                if key == VDJ_ENTER_BUTTON:
-                    self._set_standby(False)
-                    self._set_vdj_mode(True)
-                elif key in STANDBY_WAKE_BUTTONS:
-                    self._set_standby(False)
-                    return key != STANDBY_BUTTON  # MIXER / PLUGIN also go on to select their view
-            return False
-        if (is_cc and midi_bytes[:2] == STANDBY_BUTTON and midi_bytes[2] > 0
-                and (self._shift_down or self.elements.shift.is_pressed)):
-            self._set_standby(True)
-            return False
-        # "SAMPLING" never reaches Ableton, it's reserved for entering VirtualDJ mode
-        if is_cc and midi_bytes[:2] == VDJ_ENTER_BUTTON:
-            if midi_bytes[2] > 0:
-                # A view button too: VOLUME / SWING / TEMPO off
-                with self.component_guard():
-                    self.component_map["Encoder_Mode_Control"].reset_selected_mode()
-                if not self._vdj_mode:
-                    self._set_vdj_mode(True)
-            return False
+        # MidiRouter decides; its side effects are this script's methods, called by name
+        return self._router.accept(midi_bytes, self._router_environment, self._run_router_effect)
 
-        # FOLLOW is a modifier only: FOLLOW + knob launches the clip of that knob's track in the cursor's scene.
-        # It no longer toggles Ableton Link (Link is still on / off from Live itself)
-        if is_cc and midi_bytes[:2] == LINK_BUTTON and not self._vdj_mode:
-            if midi_bytes[2] > 0:
-                self._follow_held, self._follow_used = True, False
-            else:
-                self._follow_held = False
-            return False
+    def _run_router_effect(self, name, *args):
+        getattr(self, name)(*args)
 
-        # RESTART + SOLO (in either order): every track out of the prelisten / solo
-        if (is_cc and midi_bytes[2] > 0 and not self._vdj_mode
-                and ((midi_bytes[:2] == SOLO_BUTTON and self._restart_held)
-                     or (midi_bytes[:2] == RESTART_BUTTON and self.elements.solo.is_pressed))):
-            self._restart_held, self._restart_used = midi_bytes[:2] == RESTART_BUTTON or self._restart_held, True
-            self._clear_prelisten()
-            return False
+    # The routing state belongs to the router; these keep the names the rest of the script reads
+    _vdj_mode = property(lambda self: self._router.vdj_mode)
+    _standby = property(lambda self: self._router.standby)
+    _pad_lock = property(lambda self: self._router.pad_lock)
+    _follow_held = property(lambda self: self._router.follow_held)
 
-        if is_cc and midi_bytes[:2] == PAD_LOCK_BUTTON:
-            if midi_bytes[2] > 0:
-                if self._vdj_mode:
-                    self._pad_lock = not self._pad_lock
-                    self._c_instance.log_message(f"CustomMaschineMK3: pad lock = {self._pad_lock}")
-                    return False
-                if self._pad_lock:
-                    # In Ableton, LOCK only releases the pads; the press (and its release) never reach Ableton
-                    self._set_pad_lock(False)
-                    self._swallow_lock_release = True
-                    return False
-            elif self._swallow_lock_release:
-                self._swallow_lock_release = False
-                return False
+    def _reset_encoder_mode(self):
+        # VOLUME / SWING / TEMPO off
+        with self.component_guard():
+            self.component_map["Encoder_Mode_Control"].reset_selected_mode()
 
-        # RESTART is also a modifier: its loop on / off happens on release, only if no knob was touched meanwhile
-        if is_cc and midi_bytes[:2] == RESTART_BUTTON and not self._vdj_mode:
-            if midi_bytes[2] > 0:
-                self._restart_held, self._restart_used = True, False
-                if self._shift_down or self.elements.shift.is_pressed:
-                    # SHIFT + RESTART: every volume in the mixer back to its default (not the loop toggle)
-                    self._restart_used = True
-                    self._reset_all_volumes()
-            else:
-                if self._restart_held and not self._restart_used:
-                    self.song.loop = not self.song.loop
-                self._restart_held = False
-            return False
-
-        if is_cc and midi_bytes[:2] in KNOB_TOUCH_CCS and midi_bytes[2] > 0 and not self._vdj_mode:
-            index = KNOB_TOUCH_CCS.index(midi_bytes[:2])
-            volume_view = self.component_map["Display_Modes"].selected_mode in (MIXER_DISPLAY_MODE, SESSION_DISPLAY_MODE)
-            if self._restart_held:
-                # RESTART + knob: default value (device parameter's default, mixer volume to 0 dB...)
-                self._restart_used = True
-                self._set_knob_parameter(index, default = True)
-            elif self.elements.erase.is_pressed and volume_view:
-                # ERASE + double touch on a knob in the mixer / session view: to zero (volume to -inf, pan to
-                # center). Double, so it can't happen by accident
-                now = perf_counter()
-                last_index, last_time = self._erase_touch
-                if last_index == index and now - last_time <= ERASE_DOUBLE_TOUCH_SECONDS:
-                    self._set_knob_parameter(index, default = False)
-                    self._erase_touch = (None, 0.0)
-                else:
-                    self._erase_touch = (index, now)
-            elif self.elements.mute.is_pressed and volume_view:
-                # MUTE + knob: stop the clip playing on that knob's track
-                self._stop_knob_track_clip(index)
-            elif self.elements.solo.is_pressed and volume_view:
-                # SOLO + knob: that knob's track to the prelisten (solo / cue, as Live's Solo / Cue switch says)
-                self._toggle_knob_track_prelisten(index)
-            elif self._follow_held and volume_view:
-                # FOLLOW + knob: launch the clip of that knob's track in the scene under the cursor
-                self._follow_used = True
-                self._launch_knob_track_clip(index)
-
-        if (is_cc and not self._vdj_mode
-                and (self._session_view or self.component_map["Display_Modes"].selected_mode == MIXER_DISPLAY_MODE)
-                and (midi_bytes[:2] in (SESSION_NAV_TURN, SESSION_NAV_PUSH) or midi_bytes[:2] in SESSION_NAV_TILTS)
-                and self.component_map["Encoder_Modes"].selected_mode == ENCODER_DEFAULT_MODE):
-            self._handle_session_navigation(midi_bytes)
-            return False
-
-        if (is_cc and midi_bytes[:2] in (LEFT_BUTTON, RIGHT_BUTTON) and not self._vdj_mode
-                and self.component_map["Display_Modes"].selected_mode == MIXER_DISPLAY_MODE
-                and not self.elements.macro.is_pressed and not self.elements.plugin.is_pressed):
-            # In the mixer, left / right change the mixer page: volume <-> pan <-> sends (FXs)
-            # Letting the press through to MaschineMixerComponent.prev_parameter_button / next_parameter_button
-            return True
-
-        if is_cc and midi_bytes[:2] == NEW_SCENE_BUTTON and not self._vdj_mode:
-            if midi_bytes[2] > 0:
-                self._new_scene_below_cursor()
-            return False
-
-        if is_cc and midi_bytes[:2] == DELETE_CLIP_BUTTON and not self._vdj_mode:
-            if midi_bytes[2] > 0:
-                self._delete_clip()
-            return False
-
-        if is_cc and (midi_bytes[:2] in VIEW_BUTTONS or midi_bytes[:2] in PAD_PAGE_BUTTONS) and midi_bytes[2] > 0:
-            # Also when the view doesn't change (e.g. MIXER while already in the mixer); the pad pages
-            # (KEYBOARD, PAD MODE, CHORDS, STEP) too, like in the VirtualDJ mapping
+    def _close_note_repeat_selector(self):
+        notes = self.component_map["Group_Button_Mode_Control"]
+        if notes.get_note_repeat_selector_state():
             with self.component_guard():
-                self.component_map["Encoder_Mode_Control"].reset_selected_mode()
+                notes.set_note_repeat_selector_state(False)
 
-        # ARRANGER enters the session view; the other view buttons leave it (they select their own display mode)
-        if is_cc and midi_bytes[:2] == SESSION_VIEW_BUTTON:
-            if midi_bytes[2] > 0:
-                if self._vdj_mode:
-                    self._set_vdj_mode(False)
-                self._show_session_view()
-            return False
-
-        if is_cc and midi_bytes[:2] in TOUCHSTRIP_MODE_BUTTONS and midi_bytes[2] > 0 and not self._vdj_mode:
-            notes = self.component_map["Group_Button_Mode_Control"]
-            if notes.get_note_repeat_selector_state():
-                with self.component_guard():
-                    notes.set_note_repeat_selector_state(False)
-
-        if self._vdj_mode:
-            if is_cc and midi_bytes[:2] in VDJ_EXIT_BUTTONS and midi_bytes[2] > 0:
-                # Leave VirtualDJ mode and let the press through, so it selects mixer / device mode as usual
-                self._set_vdj_mode(False)
-                return True
-            # PLAY / STOP (and SHIFT, for SHIFT + STOP) keep driving Ableton's transport
-            if midi_bytes[:4] == SHIFT_SYSEX_PREFIX:
-                return True
-            return is_cc and (midi_bytes[:2] in ABLETON_ALWAYS_BUTTONS or midi_bytes[:2] in SHARED_ENCODER_MODE_BUTTONS)
-
-        if self._pad_lock and self._is_pad_section(midi_bytes):
-            return False
-
-        return True
-
-    @staticmethod
-    def _is_vdj_only(midi_bytes):
-        # Note on / off / poly pressure of the VirtualDJ-only buttons
-        midi_bytes = tuple(midi_bytes)
-        return (len(midi_bytes) == 3 and midi_bytes[0] & 0xF0 in (0x80, 0x90, 0xA0)
-                and midi_bytes[0] & 0x0F == VDJ_ONLY_CHANNEL and midi_bytes[1] in VDJ_ONLY_NOTES)
-
-    @staticmethod
-    def _is_pad_section(midi_bytes, include_lock = False):
-        # The 16 pads (note on / off / poly pressure on any channel), the pad page buttons, the group buttons A-H
-        # and the touch strip: what the pad lock gives to VirtualDJ
-        midi_bytes = tuple(midi_bytes)
-        if len(midi_bytes) != 3:
-            return False
-        if midi_bytes[0] & 0xF0 in (0x80, 0x90, 0xA0) and midi_bytes[1] in PAD_NOTES:
-            return True
-        if midi_bytes[0] & 0xF0 == 0xE0:  # the touch strip (pitch bend): movement, and its LEDs on the way out
-            return True
-        if midi_bytes[0] == 0xB1 and midi_bytes[1] in GROUP_BUTTON_CCS:  # A-H
-            return True
-        return midi_bytes[:2] in PAD_PAGE_BUTTONS or (include_lock and midi_bytes[:2] == PAD_LOCK_BUTTON)
+    def _toggle_loop(self):
+        self.song.loop = not self.song.loop
 
     def build_midi_map(self, midi_map_handle):
         script_handle = self._c_instance.handle()
@@ -754,20 +475,15 @@ class CustomMaschineMK3(ControlSurface):
             self._logged_errors[key] = (text, now)
             self._log(f"ERROR in {key}:\n{text}")
 
-    def _set_standby(self, enabled):
-        if enabled == self._standby:
-            return
+    # The router changes the modes and then calls these for what follows (it already left VirtualDJ mode and the pad
+    # lock when entering standby, like VirtualDJ's mapping does with SHIFT + CHANNEL)
+    def _on_standby_changed(self, enabled):
         self._c_instance.log_message(f"CustomMaschineMK3: standby = {enabled}")
         if enabled:
-            # VirtualDJ's mapping also leaves its mode with SHIFT + CHANNEL
-            self._vdj_mode = False
-            self._pad_lock = False
             self._sync_pad_lock_mode()
-            self._standby = True
             self.request_rebuild_midi_map()
             self._blank_hardware()
         else:
-            self._standby = False
             self.request_rebuild_midi_map()
             self._redisplay()
             self.schedule_message(VDJ_REFRESH_DELAY, self._refresh_after_vdj_mode)
@@ -791,21 +507,19 @@ class CustomMaschineMK3(ControlSurface):
         except Exception as error:
             logger.debug(f"blank failed: {error!r}")
 
-    def _set_vdj_mode(self, enabled):
+    def _on_vdj_mode_changed(self, enabled):
         # Always written to Live's Log.txt, regardless of Config.LOGGING
         self._c_instance.log_message(f"CustomMaschineMK3: VirtualDJ mode = {enabled}")
         if enabled:
             super()._do_send_midi((SESSION_VIEW_BUTTON[0], SESSION_VIEW_BUTTON[1], 0))
-        self._vdj_mode = enabled
         self._sync_pad_lock_mode()
         self.request_rebuild_midi_map()
         if not enabled:
             self._redisplay()
             self.schedule_message(VDJ_REFRESH_DELAY, self._refresh_after_vdj_mode)
 
-    def _set_pad_lock(self, enabled):
+    def _on_pad_lock_changed(self, enabled):
         self._c_instance.log_message(f"CustomMaschineMK3: pad lock = {enabled}")
-        self._pad_lock = enabled
         self._sync_pad_lock_mode()
         self.request_rebuild_midi_map()
         if not enabled:
@@ -1697,7 +1411,7 @@ class CustomMaschineMK3(ControlSurface):
         # Clear touchstrip
         self._send_midi((0xE0, 0x00, 0x00))
         # Pads and buttons off too: with Ableton closed the Maschine rests instead of keeping its last lights
-        self._standby = True
+        self._router.standby = True
         self._blank_hardware()
 
         if self._screen_bridge_timer is not None:

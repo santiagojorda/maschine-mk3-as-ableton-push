@@ -20,7 +20,7 @@ if errorlevel 1 goto fallo
 
 echo [3/3] Compilando con PyInstaller...
 .venv\Scripts\python -m PyInstaller --noconfirm --clean --onedir --noconsole --name MaschineMK3AsPush ^
-  --icon prototipo\icono.ico --paths prototipo ^
+  --icon prototipo\icono.ico --paths prototipo --paths ..\..\maschine-mk3-driver ^
   --add-data "prototipo\config.example.json;." ^
   --collect-all libusb_package --hidden-import mido.backends.rtmidi --hidden-import rtmidi ^
   prototipo\maschine_mk3.py

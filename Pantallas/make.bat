@@ -1,14 +1,10 @@
 @echo off
 setlocal
 
-rem Detectar si estamos en la carpeta ABLETON (la copia de control\) o dentro de Pantallas
-if exist "%~dp0maschine-mk3-as-ableton-push\Pantallas" (
-    set "ROOT_DIR=%~dp0"
-    set "DRIVER_DIR=%~dp0maschine-mk3-as-ableton-push\Pantallas"
-) else (
-    set "DRIVER_DIR=%~dp0"
-    set "ROOT_DIR=%~dp0..\"
-)
+rem DRIVER_DIR: esta carpeta (Pantallas). ROOT_DIR: la que tiene rendimiento\ (el monitor y las marcas),
+rem que vive al lado del repo, fuera de git: Pantallas\..\..
+set "DRIVER_DIR=%~dp0"
+set "ROOT_DIR=%~dp0..\..\"
 
 set "DIST_EXE=%DRIVER_DIR%\dist\MaschineMK3AsPush\MaschineMK3AsPush.exe"
 set "LOCAL_EXE=%DRIVER_DIR%\MaschineMK3AsPush.exe"

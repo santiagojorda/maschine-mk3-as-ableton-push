@@ -35,6 +35,8 @@ DEVICE = RAIZ / "VirtualDJ" / "Devices" / "MaschineMK3-VDJ.xml"
 MAPPER = RAIZ / "VirtualDJ" / "Mappers" / "MASCHINEMK3VDJ - Mapeo Personalizado.xml"
 SCRIPT = RAIZ / "Ableton" / "CustomMaschineMK3"
 MODE_PY = (RAIZ / "Pantallas" / "prototipo" / "mode.py",)
+# El script de Ableton: la clase principal y los mixins en que está partida
+MODULOS_SCRIPT = ("CustomMaschineMK3.py", "ScreenBridge.py", "SessionNavigation.py", "KnobActions.py")
 
 # Variables del mapeo de VirtualDJ en cada modo de la Maschine (las demás quedan "desconocidas": se miran las dos ramas)
 ENTORNO_VDJ = {
@@ -221,10 +223,11 @@ def cargar_router():
 
 
 def leer_constantes(router):
-    """Las constantes de MidiRouter.py y las de CustomMaschineMK3.py (estas sin Live: se leen del texto)."""
+    """Las constantes de MidiRouter.py y las del resto del script (estas sin Live: se leen del texto)."""
     constantes = {nombre: valor for nombre, valor in vars(router).items() if nombre.isupper()}
-    arbol = ast.parse((SCRIPT / "CustomMaschineMK3.py").read_text(encoding="utf-8"))
-    for nodo in arbol.body:
+    nodos = [nodo for archivo in MODULOS_SCRIPT
+             for nodo in ast.parse((SCRIPT / archivo).read_text(encoding="utf-8")).body]
+    for nodo in nodos:
         if isinstance(nodo, ast.Assign) and len(nodo.targets) == 1 and isinstance(nodo.targets[0], ast.Name):
             nombre = nodo.targets[0].id
             if not nombre.isupper():
@@ -339,9 +342,10 @@ def revisar_efectos(informe):
     """Cada efecto que pide el router (run("nombre", ...)) tiene que ser un método del script: si no, falla recién en
     Live, al apretar ese botón."""
     router = (SCRIPT / "MidiRouter.py").read_text(encoding="utf-8")
-    metodos = set(re.findall(r"^    def (\w+)\(", (SCRIPT / "CustomMaschineMK3.py").read_text(encoding="utf-8"), re.M))
+    metodos = {metodo for archivo in MODULOS_SCRIPT
+               for metodo in re.findall(r"^    def (\w+)\(", (SCRIPT / archivo).read_text(encoding="utf-8"), re.M)}
     for nombre in sorted(set(re.findall(r'run\("(\w+)"', router)) - metodos):
-        informe.error(f"MidiRouter.py pide el efecto '{nombre}' y CustomMaschineMK3.py no tiene ese método")
+        informe.error(f"MidiRouter.py pide el efecto '{nombre}' y el script (ni sus mixins) no tiene ese método")
 
 
 def revisar_duenos_ableton(informe, router_mod):

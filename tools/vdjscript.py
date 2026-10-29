@@ -132,6 +132,87 @@ def acciones(nodo, entorno):
     return acciones(nodo[2], entorno) + acciones(nodo[3], entorno)
 
 
+# --- Escribir legible y compactar ------------------------------------------------------------------------------
+
+ANCHO = 100
+
+
+def compactar(texto):
+    """El texto de una acción en una sola línea, con un espacio entre tokens (VirtualDJ ignora los espacios)."""
+    salida = ""
+    for token in tokenizar(texto):
+        if salida and not salida.endswith("(") and token != ")":
+            salida += " "
+        salida += token
+    return salida
+
+
+def _grupos(tokens):
+    """Los tokens de un nivel, con cada (...) como una lista adentro."""
+    pila = [[]]
+    for token in tokens:
+        if token == "(":
+            pila.append([])
+        elif token == ")" and len(pila) > 1:
+            grupo = pila.pop()
+            pila[-1].append(grupo)
+        else:
+            pila[-1].append(token)
+    while len(pila) > 1:  # paréntesis sin cerrar: se dejan como estaban
+        grupo = pila.pop()
+        pila[-1].extend(["("] + grupo)
+    return pila[0]
+
+
+def _plano(nivel):
+    partes = []
+    for item in nivel:
+        partes += ["(", *_plano(item), ")"] if isinstance(item, list) else [item]
+    return partes
+
+
+def _formatear(nivel, sangria):
+    plano = compactar(" ".join(_plano(nivel)))
+    if len(plano) + len(sangria) <= ANCHO or not any(t in ("?", ":", "&") for t in nivel):
+        return [sangria + _en_linea(nivel, sangria)]
+    # Corta en los ? / : / & de este nivel; los (...) largos van en líneas propias, más adentro
+    lineas, actual = [], []
+    for item in nivel:
+        if item in ("?", ":", "&") and actual:
+            lineas.append(actual)
+            actual = []
+        actual.append(item)
+    lineas.append(actual)
+    salida = []
+    for numero, linea in enumerate(lineas):
+        prefijo = sangria if numero == 0 else sangria + "    "
+        salida += _linea_con_grupos(linea, prefijo)
+    return salida
+
+
+def _en_linea(nivel, sangria):
+    return compactar(" ".join(_plano(nivel)))
+
+
+def _linea_con_grupos(linea, prefijo):
+    texto = compactar(" ".join(_plano(linea)))
+    if len(prefijo) + len(texto) <= ANCHO:
+        return [prefijo + texto]
+    # El último (...) de la línea, si es largo, se abre en un bloque
+    cabeza = linea[:-1] if isinstance(linea[-1], list) else linea
+    cola = linea[-1] if isinstance(linea[-1], list) else None
+    if cola is None:
+        return [prefijo + texto]
+    inicio = compactar(" ".join(_plano(cabeza)))
+    return ([prefijo + (inicio + " (" if inicio else "(")] + _formatear(cola, prefijo + "    ")
+            + [prefijo + ")"])
+
+
+def formatear(texto):
+    """Una acción de una línea, en varias líneas sangradas por anidamiento (compactar() la vuelve a una)."""
+    return "\n".join(_formatear(_grupos(tokenizar(texto)), ""))
+
+
 # --- Ejecutar con valores concretos ----------------------------------------------------------------------------
 
 def _pregunta(palabras, variables, valor):

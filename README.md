@@ -2,12 +2,10 @@
 
 [![Ableton Live 12](https://img.shields.io/badge/Ableton%20Live-12%20Suite-00D2B4.svg)](https://www.ableton.com)
 [![Native Instruments](https://img.shields.io/badge/Hardware-Maschine%20MK3-black.svg)](https://www.native-instruments.com)
-[![Windows 11](https://img.shields.io/badge/OS-Windows%2011%20MIDI%20Services-0078D4.svg)](https://microsoft.com)
-[![Release Driver](https://img.shields.io/badge/Release%20Driver-v1.0.0%20(Windows%20x64)-brightgreen.svg)](https://github.com/santiagojorda/maschine-mk3-driver/releases/latest)
 [![Repo Principal](https://img.shields.io/badge/Repo-maschine--mk3--as--ableton--push-orange.svg)](https://github.com/santiagojorda/maschine-mk3-as-ableton-push)
-[![Manual Web](https://img.shields.io/badge/Manual-All%20Operations%20(Web)-brightgreen.svg)](https://santiagojorda.github.io/maschine-mk3-as-ableton-push/)
 [![YouTube Playlist](https://img.shields.io/badge/YouTube-Maicol%20Session-FF0000?logo=youtube&logoColor=white)](https://www.youtube.com/watch?v=ImqHw-zkiZQ&list=PLxk2dEOPjuEYO00P264yMStEUhukVkO1y)
-[![Instagram](https://img.shields.io/badge/Instagram-@santiagojorda-E4405F?logo=instagram&logoColor=white)](http://instagram.com/santiagojorda)
+
+![Maschine MK3 as Ableton Push](docs/images/maschine-mk3-as-push-hero.jpg)
 
 ![Maschine MK3 as Ableton Push](docs/images/maschine-mk3-as-push-hero.jpg)
 
